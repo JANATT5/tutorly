@@ -170,6 +170,34 @@ export const tutors: Tutor[] = [
   },
 ];
 
+// Sub-topics and availability, keyed by tutor id — split out from the Tutor
+// type above instead of bloating every object literal. Used by the Tutor
+// Detail page (topics grid + the two request-a-slot rows).
+
+export const tutorTopics: Record<string, string[]> = {
+  "lara-khoury": ["Mechanics", "Waves & Optics", "Algebra II", "Trigonometry"],
+  "nour-abou-zeid": ["Electromagnetism", "Thermodynamics", "Organic Chemistry"],
+  "omar-zreik": ["Python", "Data Structures", "Discrete Math"],
+  "yasmine-fakhoury": ["Cell Biology", "Genetics", "Stoichiometry"],
+  "karim-haddad": ["Algebra I", "Pre-Calculus", "Word Problems"],
+  "sarah-matta": ["Organic Chemistry", "Acids & Bases", "Cell Biology"],
+  "elias-nassar": ["Python", "Java", "Intro Algorithms"],
+  "maya-saleh": ["Mechanics", "Calculus I", "Vectors"],
+  "tarek-abdallah": ["Intro Biology", "Ecology", "Lab Skills"],
+};
+
+export const tutorAvailability: Record<string, string[]> = {
+  "lara-khoury": ["Mon · 4:00 PM", "Wed · 6:00 PM"],
+  "nour-abou-zeid": ["Tue · 5:00 PM", "Thu · 3:30 PM"],
+  "omar-zreik": ["Sat · 11:00 AM", "Sun · 2:00 PM"],
+  "yasmine-fakhoury": ["Mon · 5:30 PM", "Fri · 4:00 PM"],
+  "karim-haddad": ["Tue · 6:00 PM", "Sat · 10:00 AM"],
+  "sarah-matta": ["Wed · 4:30 PM", "Sun · 1:00 PM"],
+  "elias-nassar": ["Thu · 6:30 PM", "Sat · 3:00 PM"],
+  "maya-saleh": ["Mon · 6:00 PM", "Wed · 5:00 PM"],
+  "tarek-abdallah": ["Fri · 5:00 PM", "Sun · 11:00 AM"],
+};
+
 // ---------------------------------------------------------------------------
 // Practice questions  (Practice page + student dashboard performance)
 // ---------------------------------------------------------------------------
