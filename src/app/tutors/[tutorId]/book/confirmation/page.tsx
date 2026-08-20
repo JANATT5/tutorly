@@ -1,46 +1,48 @@
-import Link from "next/link";
-import AppShell from "@/components/AppShell";
+// app/tutors/[tutorId]/book/confirmation/page.tsx  →  /tutors/123/book/confirmation
+//
+// Final step of the booking flow. Your doc calls this out specifically as
+// worth its own URL because a user might screenshot, refresh, or come back
+// to this exact screen — unlike a modal or toast, which disappears.
+//
+// In the Figma Make prototype this screen needs `tutor + slot + form` all
+// passed in from the previous screen's state. Once this is a real route,
+// that data either needs to come from a query param / booking id
+// (e.g. ?bookingId=abc) or be re-fetched by tutorId + a booking id.
 
-export default function ConfirmationPage() {
+import PageContainer from "@/components/layout/PageContainer";
+import PlaceholderBlock from "@/components/layout/PlaceholderBlock";
+
+type ConfirmationPageProps = {
+  params: Promise<{ tutorId: string }>;
+  searchParams: Promise<{ bookingId?: string }>;
+};
+
+export default async function BookingConfirmationPage({
+  params,
+  searchParams,
+}: ConfirmationPageProps) {
+  const { tutorId } = await params;
+  const { bookingId } = await searchParams;
+
   return (
-    <AppShell
-      title="Request Sent"
-      subtitle="Your tutoring request has been submitted successfully."
-    >
-      <div className="mx-auto max-w-xl rounded-2xl border bg-white p-10 text-center shadow-sm">
-        {/* Success Icon */}
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-2xl text-green-600">
-          ✓
-        </div>
-
-        {/* Message */}
-        <h2 className="mt-6 text-2xl font-bold text-slate-900">
-          You&apos;re all set!
-        </h2>
-
-        <p className="mt-3 leading-7 text-slate-600">
-          Your session request has been sent to the tutor.
-          They will review your request and contact you using
-          the information you provided.
+    <PageContainer width="narrow">
+      <div className="rounded-2xl border border-[#DDD8CF] bg-white p-8 text-center">
+        <p className="mb-2 font-mono text-xs uppercase tracking-[0.14em] text-[#1B4D3E]">
+          Request sent
         </p>
-
-        {/* Actions */}
-        <div className="mt-8 flex justify-center gap-3">
-          <Link
-            href="/tutors"
-            className="rounded-xl border border-slate-300 px-4 py-3 font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Find Another Tutor
-          </Link>
-
-          <Link
-            href="/"
-            className="rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white hover:bg-indigo-700"
-          >
-            Back Home
-          </Link>
-        </div>
+        <h1 className="mb-4 font-serif text-2xl text-[#1A1714]">
+          Your session request is on its way
+        </h1>
+        <p className="mx-auto max-w-sm text-sm leading-relaxed text-[#6B6560]">
+          The tutor will reach out to confirm the time. Booking reference:{" "}
+          {bookingId ?? "(pending)"} · Tutor: {tutorId}
+        </p>
       </div>
-    </AppShell>
+
+      {/* Real component later: booking summary card (tutor, subject, slot) */}
+      <div className="mt-8">
+        <PlaceholderBlock label="Booking summary card" height="h-32" />
+      </div>
+    </PageContainer>
   );
 }

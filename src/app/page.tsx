@@ -1,113 +1,139 @@
+// app/page.tsx  →  /
+
 import Link from "next/link";
+import PageContainer from "@/components/layout/PageContainer";
+import PlaceholderBlock from "@/components/layout/PlaceholderBlock";
+import SubjectPill from "@/components/layout/SubjectPill";
+
+const subjects = [
+  { icon: "Σ", label: "Mathematics", href: "/tutors?subject=mathematics" },
+  { icon: "⚡", label: "Physics", href: "/tutors?subject=physics" },
+  { icon: "⚗️", label: "Chemistry", href: "/tutors?subject=chemistry" },
+  { icon: "🧬", label: "Biology", href: "/tutors?subject=biology" },
+  { icon: "</>", label: "Computer Science", href: "/tutors?subject=computer-science" },
+];
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-white">
-      {/* Navbar */}
-      <nav className="border-b bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <Link
-            href="/"
-            className="text-2xl font-bold text-indigo-600"
-          >
-            Tutorly
-          </Link>
-
-          <div className="flex items-center gap-6 text-sm text-slate-600">
-            <Link href="/tutors" className="hover:text-indigo-600">
-              Find a Tutor
-            </Link>
-
-            <Link
-              href="/study-tools"
-              className="hover:text-indigo-600"
-            >
-              Study Tools
-            </Link>
-
-            <Link
-              href="/student/dashboard"
-              className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white"
-            >
-              Dashboard
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      {/* Hero */}
-      <section className="mx-auto max-w-7xl px-6 py-24">
-        <div className="max-w-3xl">
-          <p className="mb-4 font-semibold text-indigo-600">
-            Learn smarter. Match faster.
+    <PageContainer width="wide">
+      {/* Hero + Planr card */}
+      <section className="grid items-center gap-12 py-10 md:grid-cols-2 md:py-16">
+        {/* Left: hero */}
+        <div className="flex flex-col items-start gap-6">
+          <p className="font-mono text-xs uppercase tracking-[0.14em] text-[#7C9473]">
+            Academic tutoring for Grade 12 &amp; university · Lebanon
           </p>
 
-          <h1 className="text-5xl font-bold leading-tight tracking-tight text-slate-900">
-            Find the right tutor.
+          <h1 className="font-serif text-5xl leading-[1.05] text-[#1B4D3E] md:text-6xl">
+            Learn
             <br />
-            Study smarter.
+            <span className="italic">smarter,</span>
+            <br />
+            match faster.
           </h1>
 
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-            Tutorly connects students with trusted CS and science
-            tutors while giving them practical AI-powered study tools.
+          <p className="text-base text-[#3D3A37]">
+            Pick a subject and meet your tutor today.
           </p>
 
-          <div className="mt-8 flex gap-4">
+          <div className="mt-2 flex flex-col gap-3">
+            <p className="font-mono text-xs uppercase tracking-[0.14em] text-[#7C9473]">
+              Pick a subject to start
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {subjects.map((subject) => (
+                <Link key={subject.href} href={subject.href}>
+                  <SubjectPill icon={subject.icon} label={subject.label} />
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-5">
             <Link
               href="/tutors"
-              className="rounded-xl bg-indigo-600 px-6 py-3 font-semibold text-white"
+              className="rounded-full bg-[#1B4D3E] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#245C4B]"
             >
-              Find a tutor
+              Browse all tutors
             </Link>
-
             <Link
-              href="/study-tools"
-              className="rounded-xl border border-slate-300 px-6 py-3 font-semibold text-slate-700"
+              href="/quiz"
+              className="text-sm font-medium text-[#3D3A37] underline underline-offset-4 hover:text-[#1B4D3E]"
             >
-              Explore study tools
+              Not sure what to study? Take the quiz →
             </Link>
           </div>
+
+          <div className="mt-2 grid w-full grid-cols-2 gap-6 border-t border-[#DDD8CF] pt-8 sm:grid-cols-4">
+            <div>
+              <p className="font-serif text-3xl text-[#1B4D3E]">6+</p>
+              <p className="text-sm text-[#6B6560]">Vetted tutors</p>
+            </div>
+            <div>
+              <p className="font-serif text-3xl text-[#1B4D3E]">750+</p>
+              <p className="text-sm text-[#6B6560]">Sessions completed</p>
+            </div>
+            <div>
+              <p className="font-serif text-3xl text-[#1B4D3E]">3</p>
+              <p className="text-sm text-[#6B6560]">Curricula covered</p>
+            </div>
+            <div>
+              <p className="font-serif text-3xl text-[#1B4D3E]">Free</p>
+              <p className="text-sm text-[#6B6560]">To browse</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Planr card */}
+        <div className="rounded-2xl border border-[#DDD8CF] bg-white p-6 shadow-sm md:p-8">
+          <p className="mb-3 font-mono text-xs uppercase tracking-[0.14em] text-[#7C9473]">
+            AI course advisor · Planr
+          </p>
+          <h2 className="mb-6 text-xl font-bold text-[#1A1714]">
+            Always know how close you are to your goal
+          </h2>
+
+          <div className="rounded-xl bg-[#F0EBE3] p-5">
+            <p className="mb-3 font-mono text-xs uppercase tracking-[0.14em] text-[#6B6560]">
+              Example roadmap
+            </p>
+            <div className="mb-4 flex items-start gap-3">
+              <span className="text-lg">💻</span>
+              <div>
+                <p className="text-sm font-semibold text-[#1A1714]">
+                  Path to Computer Engineering
+                </p>
+                <p className="text-xs text-[#6B6560]">5 courses · Updated recently</p>
+              </div>
+            </div>
+            <div className="mb-3 h-2 w-full overflow-hidden rounded-full bg-[#DDD8CF]">
+              <div className="h-full w-[30%] rounded-full bg-[#1B4D3E]" />
+            </div>
+            <p className="text-sm font-medium text-[#1A1714]">
+              30% complete — on your way to your goal 🎯
+            </p>
+          </div>
+
+          <Link
+            href="/planr"
+            className="mt-6 block rounded-full bg-[#1B4D3E] px-6 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-[#245C4B]"
+          >
+            Build your roadmap →
+          </Link>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="mx-auto grid max-w-7xl gap-5 px-6 pb-20 md:grid-cols-3">
-        <Feature
-          title="Find Tutors"
-          description="Browse tutors by subject, level, and expertise."
-        />
-
-        <Feature
-          title="Practice Questions"
-          description="Generate questions and test your understanding."
-        />
-
-        <Feature
-          title="Career & Planr"
-          description="Discover suitable paths and create a learning plan."
-        />
+      {/* Real component later: featured/top-matched tutors carousel */}
+      <section className="py-8">
+        <h2 className="mb-4 font-serif text-xl text-[#1A1714]">Featured tutors</h2>
+        <PlaceholderBlock label="TutorCard grid (3–4 featured tutors)" height="h-48" />
       </section>
-    </main>
-  );
-}
 
-function Feature({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-2xl border bg-slate-50 p-6">
-      <h2 className="font-semibold text-slate-900">
-        {title}
-      </h2>
-
-      <p className="mt-2 text-sm leading-6 text-slate-600">
-        {description}
-      </p>
-    </div>
+      {/* Real component later: the 3 study tools as cards linking into /study-tools/* */}
+      <section className="py-8">
+        <h2 className="mb-4 font-serif text-xl text-[#1A1714]">Study tools</h2>
+        <PlaceholderBlock label="Career Quiz · Practice Questions · Planr — 3-up card row" height="h-40" />
+      </section>
+    </PageContainer>
   );
 }

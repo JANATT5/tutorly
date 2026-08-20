@@ -1,88 +1,39 @@
-import Link from "next/link";
-import AppShell from "@/components/AppShell";
-import SectionCard from "@/components/SectionCard";
+// app/tutors/[tutorId]/book/page.tsx  →  /tutors/123/book
+//
+// A "regular route (nested)" per your doc: it's fixed word "book" nested
+// under the dynamic [tutorId] segment. It still needs the tutorId (to know
+// WHO the booking is for), so it inherits that from the same [tutorId]
+// bracket folder one level up — that's why the params type looks identical
+// to the profile page.
 
-export default async function BookingPage({
-  params,
-}: {
+import PageContainer from "@/components/layout/PageContainer";
+import PageHeader from "@/components/layout/PageHeader";
+import PlaceholderBlock from "@/components/layout/PlaceholderBlock";
+
+type BookSessionPageProps = {
   params: Promise<{ tutorId: string }>;
-}) {
+};
+
+export default async function BookSessionPage({ params }: BookSessionPageProps) {
   const { tutorId } = await params;
 
   return (
-    <AppShell
-      title="Request a Session"
-      subtitle="Send your preferred session details to the tutor."
-    >
-      <div className="mx-auto max-w-2xl">
-        <SectionCard title="Session Details">
-          <div className="space-y-5">
-            <label className="grid gap-2 text-sm font-medium">
-              Your name
+    <PageContainer width="narrow">
+      <PageHeader
+        eyebrow={`Booking with tutor ${tutorId}`}
+        title="Book a session"
+        description="No account needed — just pick a time and leave your contact info. The tutor will confirm directly."
+      />
 
-              <input
-                className="rounded-xl border px-4 py-3"
-                placeholder="Full name"
-              />
-            </label>
-
-            <label className="grid gap-2 text-sm font-medium">
-              Email
-
-              <input
-                className="rounded-xl border px-4 py-3"
-                placeholder="you@example.com"
-                type="email"
-              />
-            </label>
-
-            <label className="grid gap-2 text-sm font-medium">
-              Subject
-
-              <input
-                className="rounded-xl border px-4 py-3"
-                placeholder="e.g. Data Structures"
-              />
-            </label>
-
-            <div className="grid gap-5 md:grid-cols-2">
-              <label className="grid gap-2 text-sm font-medium">
-                Preferred date
-
-                <input
-                  type="date"
-                  className="rounded-xl border px-4 py-3"
-                />
-              </label>
-
-              <label className="grid gap-2 text-sm font-medium">
-                Preferred time
-
-                <input
-                  type="time"
-                  className="rounded-xl border px-4 py-3"
-                />
-              </label>
-            </div>
-
-            <label className="grid gap-2 text-sm font-medium">
-              Message
-
-              <textarea
-                className="min-h-32 rounded-xl border px-4 py-3"
-                placeholder="Tell the tutor what you need help with..."
-              />
-            </label>
-
-            <Link
-              href={`/tutors/${tutorId}/book/confirmation`}
-              className="block rounded-xl bg-indigo-600 px-4 py-3 text-center font-semibold text-white"
-            >
-              Send Request
-            </Link>
-          </div>
-        </SectionCard>
+      {/* Real component later: available time slots for this tutor */}
+      <div className="mb-6">
+        <PlaceholderBlock label="Available time slots" height="h-24" />
       </div>
-    </AppShell>
+
+      {/* Real component later: contact form (name, email/phone, subject, notes).
+          Remember: plain <button onClick> handlers here, not a native <form> tag,
+          per the project's build conventions. */}
+      <PlaceholderBlock label="Contact + booking details form" height="h-56" />
+    </PageContainer>
   );
 }

@@ -1,21 +1,112 @@
 @import "tailwindcss";
 
-:root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+/* ---------------------------------------------------------
+   Fonts
+   Swap for next/font/google in layout.tsx later if you want
+   automatic subsetting + no FOUT; this is the quick path.
+--------------------------------------------------------- */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Outfit:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap");
+
+/* ---------------------------------------------------------
+   Design tokens
+   These become real Tailwind utilities:
+   bg-forest, text-amber, border-border, font-display, etc.
+--------------------------------------------------------- */
+@theme {
+  --font-display: "Fraunces", ui-serif, serif;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, monospace;
+
+  --color-forest: #1B4D3E;
+  --color-forest-dark: #245C4B;
+  --color-amber: #D47A2A;
+  --color-amber-hover: #C06820;
+
+  --color-cream: #FAF7F2;
+  --color-secondary: #F0EBE3;
+  --color-muted: #E8E2D9;
+  --color-border: #DDD8CF;
+
+  --color-fg: #1A1714;
+  --color-body: #3D3A37;
+  --color-subtle: #6B6560;
+
+  --color-gold: #F5A623;
+
+  /* Consistent corner radii across cards, pills, inputs */
+  --radius-card: 1rem;      /* rounded-2xl equivalent, named */
+  --radius-pill: 999px;
 }
 
+/* ---------------------------------------------------------
+   Base layer
+--------------------------------------------------------- */
 * {
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-cream);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  color: var(--color-fg);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+p {
+  color: var(--color-body);
+  margin: 0;
 }
 
 a {
   text-decoration: none;
+  color: inherit;
+}
+
+/* Section labels / eyebrow text, e.g. "ACADEMIC TUTORING FOR..." */
+.label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-amber);
+}
+
+/* Consistent focus ring instead of the default browser outline */
+:focus-visible {
+  outline: 2px solid var(--color-amber);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Form controls should inherit fonts/colors instead of native OS styling */
+input, textarea, select, button {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* ---------------------------------------------------------
+   Responsive base sizing
+   Bump body copy slightly on larger screens for readability
+--------------------------------------------------------- */
+@media (min-width: 768px) {
+  body {
+    font-size: 16px;
+  }
 }

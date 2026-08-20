@@ -1,92 +1,51 @@
-import Link from "next/link";
-import AppShell from "@/components/AppShell";
+// app/tutors/page.tsx  →  /tutors
+//
+// Regular route: fixed URL, but the CONTENT changes based on search/filter
+// input. Per your doc, Search and Filter aren't their own routes — they're
+// components on this page that read/write the URL's searchParams (e.g.
+// /tutors?subject=math). That's why this page component below receives a
+// `searchParams` prop: Next.js passes it in automatically for any page,
+// populated from the current URL's query string.
 
-const tutors = [
-  {
-    id: "1",
-    name: "Ahmad Khalil",
-    subject: "Computer Science",
-    level: "University",
-    rating: "4.9",
-  },
-  {
-    id: "2",
-    name: "Lina Haddad",
-    subject: "Mathematics",
-    level: "School",
-    rating: "4.8",
-  },
-  {
-    id: "3",
-    name: "Omar Saleh",
-    subject: "Programming",
-    level: "University",
-    rating: "5.0",
-  },
-];
+import PageContainer from "@/components/layout/PageContainer";
+import PageHeader from "@/components/layout/PageHeader";
+import PlaceholderBlock from "@/components/layout/PlaceholderBlock";
 
-export default function TutorsPage() {
+type TutorsPageProps = {
+  // Next.js gives every route segment's query params here as strings
+  // (or undefined if not present). `subject` matches a link like
+  // /tutors?subject=biology sent from the homepage or the Career Quiz results.
+  searchParams: Promise<{ subject?: string }>;
+};
+
+export default async function TutorsPage({ searchParams }: TutorsPageProps) {
+  const { subject } = await searchParams;
+
   return (
-    <AppShell
-      title="Find a Tutor"
-      subtitle="Find the right tutor for your learning goals."
-      nav={[
-        { label: "Home", href: "/" },
-        { label: "Study Tools", href: "/study-tools" },
-      ]}
-    >
-      {/* Search */}
-      <div className="mb-8 grid gap-3 md:grid-cols-[1fr_220px_140px]">
-        <input
-          className="rounded-xl border bg-white px-4 py-3 outline-none focus:border-indigo-500"
-          placeholder="Search tutor or subject..."
-        />
+    <PageContainer width="wide">
+      <PageHeader
+        eyebrow="Find tutors"
+        title="Browse tutors"
+        description={
+          subject
+            ? `Showing tutors for ${subject}. Clear the filter to see everyone.`
+            : "Search by subject, or filter by grade level and availability."
+        }
+      />
 
-        <select className="rounded-xl border bg-white px-4 py-3">
-          <option>All subjects</option>
-          <option>Computer Science</option>
-          <option>Mathematics</option>
-          <option>Programming</option>
-        </select>
-
-        <button className="rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white">
-          Search
-        </button>
+      {/* Real component later: SearchTutors — text input, updates ?q= */}
+      <div className="mb-6">
+        <PlaceholderBlock label="Search input" height="h-14" />
       </div>
 
-      {/* Tutors */}
-      <div className="grid gap-6 md:grid-cols-3">
-        {tutors.map((tutor) => (
-          <Link
-            key={tutor.id}
-            href={`/tutors/${tutor.id}`}
-            className="rounded-2xl border bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-indigo-300"
-          >
-            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100 font-bold text-indigo-600">
-              {tutor.name
-                .split(" ")
-                .map((name) => name[0])
-                .join("")}
-            </div>
-
-            <h2 className="text-lg font-semibold">
-              {tutor.name}
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              {tutor.subject}
-            </p>
-
-            <p className="mt-4 text-sm">
-              ⭐ {tutor.rating} · {tutor.level}
-            </p>
-
-            <p className="mt-5 font-semibold text-indigo-600">
-              View profile →
-            </p>
-          </Link>
-        ))}
+      {/* Real component later: FilterTutorsBySubject — chips/select, updates ?subject= */}
+      <div className="mb-8">
+        <PlaceholderBlock label="Subject filter chips" height="h-14" />
       </div>
-    </AppShell>
+
+      {/* Real component later: grid of <TutorCard /> — each card links to
+          /tutors/[tutorId], never has its own URL itself */}
+      <PlaceholderBlock label="Tutor results grid (TutorCard × N)" height="h-64" />
+    </PageContainer>
   );
 }

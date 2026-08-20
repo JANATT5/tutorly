@@ -1,91 +1,60 @@
-import Link from "next/link";
-import AppShell from "@/components/AppShell";
-import SectionCard from "@/components/SectionCard";
+// app/tutors/[tutorId]/page.tsx  →  /tutors/123, /tutors/456, etc.
+//
+// This is your first DYNAMIC ROUTE. The [tutorId] folder name (square
+// brackets) tells Next.js "this segment of the URL is a variable, not a
+// fixed word." Whatever the user actually visits — /tutors/42,
+// /tutors/abc123 — gets captured and handed to this component as `params`.
+//
+// This is the important migration point flagged in your doc (section 6.3):
+// the Figma Make prototype passes the WHOLE tutor object in memory. Here,
+// we only ever receive the id string from the URL, so this page is
+// responsible for fetching the full tutor by that id — which is exactly
+// what makes the profile refreshable/shareable/bookmarkable.
 
-export default async function TutorProfile({
-  params,
-}: {
+import Link from "next/link";
+import PageContainer from "@/components/layout/PageContainer";
+import PlaceholderBlock from "@/components/layout/PlaceholderBlock";
+
+type TutorProfilePageProps = {
   params: Promise<{ tutorId: string }>;
-}) {
+};
+
+export default async function TutorProfilePage({ params }: TutorProfilePageProps) {
   const { tutorId } = await params;
 
+  // TODO: replace with a real fetch once the API/DB exists, e.g.
+  // const tutor = await getTutorById(tutorId);
+  // if (!tutor) notFound();
+
   return (
-    <AppShell
-      title="Tutor Profile"
-      subtitle="Learn more about this tutor."
-      nav={[
-        { label: "All Tutors", href: "/tutors" },
-      ]}
-    >
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-6">
-          <SectionCard title="About the Tutor">
-            <div className="flex gap-5">
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xl font-bold text-indigo-600">
-                AK
-              </div>
+    <PageContainer>
+      <p className="mb-6 font-mono text-xs uppercase tracking-[0.14em] text-[#D47A2A]">
+        Tutor profile · id: {tutorId}
+      </p>
 
-              <div>
-                <h2 className="text-xl font-bold">
-                  Ahmad Khalil
-                </h2>
+      {/* Real component later: tutor header — photo, name, subjects, rating */}
+      <PlaceholderBlock label="Tutor header (photo, name, rate, subjects)" height="h-40" />
 
-                <p className="text-slate-500">
-                  Computer Science · ⭐ 4.9
-                </p>
-
-                <p className="mt-4 leading-7 text-slate-600">
-                  University tutor specializing in programming,
-                  algorithms, data structures, and introductory
-                  computer science.
-                </p>
-              </div>
-            </div>
-          </SectionCard>
-
-          <SectionCard title="Subjects & Courses">
-            <div className="flex flex-wrap gap-2">
-              {[
-                "Programming",
-                "Data Structures",
-                "Algorithms",
-                "Web Development",
-              ].map((subject) => (
-                <span
-                  key={subject}
-                  className="rounded-full bg-slate-100 px-3 py-2 text-sm"
-                >
-                  {subject}
-                </span>
-              ))}
-            </div>
-          </SectionCard>
-
-          <SectionCard title="Reviews">
-            <p className="text-sm text-slate-600">
-              &ldquo;Clear explanations and very helpful.&rdquo;
-            </p>
-          </SectionCard>
-        </div>
-
-        {/* Booking card */}
-        <div className="h-fit rounded-2xl border bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-500">
-            Starting from
-          </p>
-
-          <p className="mt-1 text-2xl font-bold">
-            $15 / session
-          </p>
-
-          <Link
-            href={`/tutors/${tutorId}/book`}
-            className="mt-6 block rounded-xl bg-indigo-600 px-4 py-3 text-center font-semibold text-white"
-          >
-            Request a Session
-          </Link>
-        </div>
+      {/* Real component later: tabbed sections — Info / Subjects / Bio / Availability.
+          These are tabs on THIS page, not separate routes, per the sitemap. */}
+      <div className="mt-8 flex gap-6 border-b border-[#DDD8CF] font-mono text-xs uppercase tracking-wide text-[#6B6560]">
+        <span className="border-b-2 border-[#1B4D3E] pb-3 text-[#1B4D3E]">Info</span>
+        <span className="pb-3">Subjects</span>
+        <span className="pb-3">Bio</span>
+        <span className="pb-3">Availability</span>
       </div>
-    </AppShell>
+      <div className="mt-6">
+        <PlaceholderBlock label="Active tab content" height="h-48" />
+      </div>
+
+      <div className="mt-8">
+        <Link
+          href={`/tutors/${tutorId}/book`}
+          className="inline-block rounded-lg bg-[#D47A2A] px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-[#C06820]"
+        >
+          Book a session
+        </Link>
+      </div>
+    </PageContainer>
   );
 }
