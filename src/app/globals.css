@@ -5,7 +5,7 @@
    Swap for next/font/google in layout.tsx later if you want
    automatic subsetting + no FOUT; this is the quick path.
 --------------------------------------------------------- */
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Outfit:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap");
+/* @import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Outfit:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap"); */
 
 /* ---------------------------------------------------------
    Design tokens

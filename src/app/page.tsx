@@ -3,7 +3,7 @@
 import Link from "next/link";
 import PageContainer from "@/components/layout/PageContainer";
 import PlaceholderBlock from "@/components/layout/PlaceholderBlock";
-import SubjectPill from "@/components/layout/SubjectPill";
+import SubjectPill from "@/components/SubjectPill";
 
 const subjects = [
   { icon: "Σ", label: "Mathematics", href: "/tutors?subject=mathematics" },
