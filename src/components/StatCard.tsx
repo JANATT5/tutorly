@@ -1,23 +1,13 @@
-// TypeScript cannot resolve the project's JSX typings/runtime in the current environment.
-// @ts-nocheck
 type StatCardProps = {
   label: string;
   value: string;
 };
 
-export default function StatCard({
-  label,
-  value,
-}: StatCardProps) {
+export default function StatCard({ label, value }: StatCardProps) {
   return (
-    <div className="rounded-2xl border bg-white p-5 shadow-sm">
-      <p className="text-sm text-slate-500">
-        {label}
-      </p>
-
-      <p className="mt-2 text-2xl font-bold text-slate-900">
-        {value}
-      </p>
+    <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
+      <p className="text-sm text-subtle">{label}</p>
+      <p className="mt-2 text-2xl font-bold text-fg">{value}</p>
     </div>
   );
 }

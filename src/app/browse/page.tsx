@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from "react";
 import PageHero from "@/components/layout/PageHero";
-import Button from "@/components/ui/Button";
+import Button from "@/components/Button";
 import TutorCard from "@/components/tutors/TutorCard";
 import { tutors, subjects, type SubjectKey } from "@/lib/mock-data";
 

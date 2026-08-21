@@ -17,12 +17,14 @@ export type SubjectKey =
   | "biology"
   | "computer-science";
 
+// Icons are literal glyphs (not keywords) so every page can render
+// `{subject.icon}` directly with no lookup table to keep in sync.
 export const subjects: { key: SubjectKey; label: string; icon: string }[] = [
-  { key: "mathematics", label: "Mathematics", icon: "sigma" },
-  { key: "physics", label: "Physics", icon: "bolt" },
-  { key: "chemistry", label: "Chemistry", icon: "flask" },
-  { key: "biology", label: "Biology", icon: "dna" },
-  { key: "computer-science", label: "Computer Science", icon: "code" },
+  { key: "mathematics", label: "Mathematics", icon: "\u03A3" },
+  { key: "physics", label: "Physics", icon: "\u26A1" },
+  { key: "chemistry", label: "Chemistry", icon: "\uD83E\uDDEA" },
+  { key: "biology", label: "Biology", icon: "\uD83E\uDDEC" },
+  { key: "computer-science", label: "Computer Science", icon: "</>" },
 ];
 
 export const levels = [
@@ -30,7 +32,23 @@ export const levels = [
   "Grade 11",
   "Grade 12 (Lebanese Bac)",
   "AS-Level",
+  "University entry prep",
 ] as const;
+
+// Shared filter/form option lists — used by Browse's curriculum/language
+// filters (currently visual-only, see app/browse/page.tsx) and by the
+// Become-a-tutor "What you teach" step. Centralized here rather than
+// duplicated per page, per the file's own stated single-source-of-truth
+// goal above.
+export const curricula = [
+  "Lebanese Bac",
+  "IG/AS-Level",
+  "IB",
+  "SAT",
+  "University prep",
+] as const;
+
+export const languages = ["Arabic", "English", "French"] as const;
 
 // ---------------------------------------------------------------------------
 // Tutors  (Browse page, Featured tutors on Home, tutor-detail)
