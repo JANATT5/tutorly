@@ -48,6 +48,12 @@ export default function HomePage() {
               Browse all tutors
             </Link>
             <Link
+              href="/login"
+              className="rounded-full border border-forest px-6 py-3 text-sm font-semibold text-forest transition-colors hover:bg-forest hover:text-white"
+            >
+              Login
+            </Link>
+            <Link
               href="/quiz"
               className="text-sm font-medium text-body underline underline-offset-4 hover:text-forest"
             >
