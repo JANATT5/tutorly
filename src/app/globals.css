@@ -41,73 +41,84 @@
 
 /* ---------------------------------------------------------
    Base layer
+   IMPORTANT: these element-selector styles must live inside
+   @layer base. Tailwind v4 sets up cascade layers as
+   theme < base < components < utilities, and any CSS written
+   OUTSIDE a @layer block is treated as unlayered — which the CSS
+   Cascade Layers spec gives *higher* priority than every named
+   layer, regardless of where it appears in the file. Previously
+   these rules sat unlayered after the utilities layer, silently
+   overriding every text-white / text-amber / etc. utility class
+   applied to a <Link>, <p>, or heading anywhere in the app.
 --------------------------------------------------------- */
-* {
-  box-sizing: border-box;
-}
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
 
-html {
-  scroll-behavior: smooth;
-  -webkit-text-size-adjust: 100%;
-}
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
 
-body {
-  margin: 0;
-  background: var(--color-cream);
-  color: var(--color-fg);
-  font-family: var(--font-sans);
-  font-size: 15px;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
-
-h1, h2, h3, h4 {
-  font-family: var(--font-display);
-  color: var(--color-fg);
-  line-height: 1.15;
-  letter-spacing: -0.01em;
-  margin: 0;
-}
-
-p {
-  color: var(--color-body);
-  margin: 0;
-}
-
-a {
-  text-decoration: none;
-  color: inherit;
-}
-
-/* Section labels / eyebrow text, e.g. "ACADEMIC TUTORING FOR..." */
-.label {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--color-amber);
-}
-
-/* Consistent focus ring instead of the default browser outline */
-:focus-visible {
-  outline: 2px solid var(--color-amber);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-/* Form controls should inherit fonts/colors instead of native OS styling */
-input, textarea, select, button {
-  font-family: inherit;
-  color: inherit;
-}
-
-/* ---------------------------------------------------------
-   Responsive base sizing
-   Bump body copy slightly on larger screens for readability
---------------------------------------------------------- */
-@media (min-width: 768px) {
   body {
-    font-size: 16px;
+    margin: 0;
+    background: var(--color-cream);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    color: var(--color-fg);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+
+  p {
+    color: var(--color-body);
+    margin: 0;
+  }
+
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  /* Section labels / eyebrow text, e.g. "ACADEMIC TUTORING FOR..." */
+  .label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--color-amber);
+  }
+
+  /* Consistent focus ring instead of the default browser outline */
+  :focus-visible {
+    outline: 2px solid var(--color-amber);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Form controls should inherit fonts/colors instead of native OS styling */
+  input, textarea, select, button {
+    font-family: inherit;
+    color: inherit;
+  }
+
+  /* ---------------------------------------------------------
+     Responsive base sizing
+     Bump body copy slightly on larger screens for readability
+  --------------------------------------------------------- */
+  @media (min-width: 768px) {
+    body {
+      font-size: 16px;
+    }
   }
 }

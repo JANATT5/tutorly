@@ -26,15 +26,16 @@ export default function FeaturedTutorCard({ tutor }: { tutor: Tutor }) {
       className="block rounded-2xl border border-border bg-white p-5 transition-shadow hover:shadow-md"
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={tutor.avatar}
             alt={tutor.name}
-            className="h-14 w-14 rounded-xl object-cover"
+            className="h-14 w-14 shrink-0 rounded-xl object-cover"
           />
-          <div>
-            <p className="font-display text-base text-fg">{tutor.name}</p>
+          <div className="min-w-0">
+            <p className="truncate font-display text-base text-fg">{tutor.name}</p>
+            <p className="text-xs text-subtle">{tutor.experienceYears} yrs exp.</p>
             <p className="mt-0.5 flex items-center gap-1 text-xs text-fg">
               <span className="text-gold">★</span>
               <span className="font-medium">{tutor.rating}</span>

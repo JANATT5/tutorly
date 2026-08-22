@@ -1,54 +1,185 @@
-import SectionCard from "@/components/SectionCard";
-import StatCard from "@/components/StatCard";
+// app/(admin)/admin-dashboard/page.tsx  →  /admin-dashboard
+//
+// Consolidates what used to be 6 separate routes (admin-dashboard,
+// /bookings, /courses, /reports, /users, /verification) into one page
+// with tabs — same pattern as the Tutor dashboard consolidation.
+// Restyled off the old indigo/slate/yellow palette onto the project's
+// actual design tokens.
 
-export default function AdminDashboard() {
+"use client";
+
+import { useState } from "react";
+import PageHeader from "@/components/layout/PageHeader";
+import StatCard from "@/components/StatCard";
+import DashboardTabs, { type DashboardTab } from "@/components/DashboardTabs";
+
+const initialBookings = [
+  { id: "b-1", pair: "Maya Hassan → Ahmad Khalil", detail: "Data Structures · Tomorrow · 4:00 PM" },
+];
+
+const courses = ["Computer Science", "Programming", "Mathematics", "Data Structures"];
+
+const users = [
+  { name: "Ahmad Khalil", role: "Tutor", status: "Active" },
+  { name: "Maya Hassan", role: "Student", status: "Active" },
+];
+
+const initialVerifications = [
+  { id: "v-1", name: "Ahmad Khalil", detail: "Computer Science Tutor" },
+];
+
+export default function AdminDashboardPage() {
+  const [verifications, setVerifications] = useState(initialVerifications);
+  function approveVerification(id: string) {
+    setVerifications((prev) => prev.filter((v) => v.id !== id));
+  }
+
+  const tabs: DashboardTab[] = [
+    {
+      id: "overview",
+      label: "Overview",
+      content: (
+        <div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="Users" value="248" />
+            <StatCard label="Tutors" value="46" />
+            <StatCard label="Pending verification" value={String(verifications.length)} />
+            <StatCard label="Bookings" value="132" />
+          </div>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            <div className="rounded-2xl border border-border bg-white p-6">
+              <h2 className="mb-2 font-display text-lg text-fg">Platform activity</h2>
+              <p className="text-sm text-subtle">Platform activity will appear here.</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-white p-6">
+              <h2 className="mb-2 font-display text-lg text-fg">Needs attention</h2>
+              <p className="text-sm text-subtle">
+                {verifications.length} tutor{verifications.length === 1 ? "" : "s"} pending
+                verification.
+              </p>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "users",
+      label: "Users",
+      content: (
+        <div className="overflow-hidden rounded-2xl border border-border bg-white">
+          <div className="grid grid-cols-3 bg-secondary p-4 text-sm font-semibold text-fg">
+            <span>Name</span>
+            <span>Role</span>
+            <span>Status</span>
+          </div>
+          {users.map((user) => (
+            <div
+              key={user.name}
+              className="grid grid-cols-3 border-t border-border p-4 text-sm"
+            >
+              <span className="text-fg">{user.name}</span>
+              <span className="text-body">{user.role}</span>
+              <span className="font-medium text-forest">{user.status}</span>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: "verification",
+      label: "Verification",
+      content: (
+        <div className="rounded-2xl border border-border bg-white p-6">
+          {verifications.length === 0 ? (
+            <p className="text-sm text-subtle">No pending tutor verifications.</p>
+          ) : (
+            <div className="space-y-4">
+              {verifications.map((v) => (
+                <div key={v.id} className="rounded-xl border border-border p-5">
+                  <h3 className="font-semibold text-fg">{v.name}</h3>
+                  <p className="mt-1 text-sm text-subtle">{v.detail}</p>
+                  <div className="mt-4 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => approveVerification(v.id)}
+                      className="rounded-lg bg-forest px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-forest-dark"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-fg transition-colors hover:border-forest"
+                    >
+                      Review
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "bookings",
+      label: "Bookings",
+      content: (
+        <div className="rounded-2xl border border-border bg-white p-6">
+          <div className="space-y-4">
+            {initialBookings.map((b) => (
+              <div key={b.id} className="rounded-xl border border-border p-5">
+                <p className="font-semibold text-fg">{b.pair}</p>
+                <p className="mt-1 text-sm text-subtle">{b.detail}</p>
+                <span className="mt-3 inline-block rounded-full bg-amber/15 px-3 py-1 text-xs font-medium text-amber-hover">
+                  Pending
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "courses",
+      label: "Courses",
+      content: (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {courses.map((course) => (
+            <div key={course} className="rounded-xl border border-border bg-white p-5">
+              <h3 className="font-semibold text-fg">{course}</h3>
+              <p className="mt-1 text-sm text-subtle">Active course</p>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: "reports",
+      label: "Reports",
+      content: (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-xl border border-border bg-white p-5">
+            <p className="text-sm text-subtle">Total sessions</p>
+            <p className="mt-2 text-2xl font-bold text-fg">132</p>
+          </div>
+          <div className="rounded-xl border border-border bg-white p-5">
+            <p className="text-sm text-subtle">Active tutors</p>
+            <p className="mt-2 text-2xl font-bold text-fg">46</p>
+          </div>
+          <div className="rounded-xl border border-border bg-white p-5">
+            <p className="text-sm text-subtle">Completion rate</p>
+            <p className="mt-2 text-2xl font-bold text-fg">92%</p>
+          </div>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">
-          Admin Dashboard
-        </h1>
-
-        <p className="mt-2 text-slate-500">
-          Monitor and manage the Tutorly platform.
-        </p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCard
-          label="Users"
-          value="248"
-        />
-
-        <StatCard
-          label="Tutors"
-          value="46"
-        />
-
-        <StatCard
-          label="Pending Verification"
-          value="7"
-        />
-
-        <StatCard
-          label="Bookings"
-          value="132"
-        />
-      </div>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <SectionCard title="Platform Activity">
-          <p className="text-sm text-slate-500">
-            Platform activity will appear here.
-          </p>
-        </SectionCard>
-
-        <SectionCard title="Needs Attention">
-          <p className="text-sm text-slate-500">
-            Items requiring admin review will appear here.
-          </p>
-        </SectionCard>
-      </div>
+      <PageHeader eyebrow="Admin" title="Platform dashboard" />
+      <DashboardTabs tabs={tabs} />
     </div>
   );
 }

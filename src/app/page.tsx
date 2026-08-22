@@ -116,23 +116,7 @@ export default function HomePage() {
               href="/planr"
               className="mt-6 block rounded-full bg-forest px-6 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-forest-dark"
             >
-<<<<<<< HEAD
               Build your roadmap →
-=======
-              Browse all tutors
-            </Link>
-            <Link
-              href="/login"
-              className="rounded-full border border-forest px-6 py-3 text-sm font-semibold text-forest transition-colors hover:bg-forest hover:text-white"
-            >
-              Login
-            </Link>
-            <Link
-              href="/quiz"
-              className="text-sm font-medium text-body underline underline-offset-4 hover:text-forest"
-            >
-              Not sure what to study? Take the quiz →
->>>>>>> 248457d38e2ace1387be583f4edfdf30ba541591
             </Link>
           </div>
         </div>
@@ -214,7 +198,7 @@ export default function HomePage() {
         </div>
 
         <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3">
-          {featuredTutors.map((tutor: typeof featuredTutors[0]) => (
+          {featuredTutors.map((tutor) => (
             <FeaturedTutorCard key={tutor.id} tutor={tutor} />
           ))}
         </div>

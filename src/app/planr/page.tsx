@@ -43,7 +43,17 @@ export default function PlanrPage() {
       <section className="bg-forest px-4 py-20 sm:px-8">
         <div className="mx-auto max-w-6xl">
           <Link
-            href="/planr/new"
+            href="/"
+            className="mb-10 inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-sm text-white/80 transition-colors hover:bg-white/15 hover:text-white"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+            Back to home
+          </Link>
+
+          <Link
+            href="/planr/create-project"
             className="inline-block rounded-full bg-amber px-7 py-3.5 text-sm font-semibold text-fg transition-colors hover:bg-amber-hover"
           >
             Create a new project

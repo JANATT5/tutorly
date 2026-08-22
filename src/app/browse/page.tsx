@@ -1,18 +1,50 @@
 // app/browse/page.tsx  →  /browse
+
 "use client";
 
 import { useMemo, useState } from "react";
 import PageHero from "@/components/layout/PageHero";
 import Button from "@/components/Button";
 import TutorCard from "@/components/tutors/TutorCard";
-import { tutors, subjects, type SubjectKey } from "@/lib/mock-data";
+import Dropdown from "@/components/Dropdown";
+import { tutors, subjects, curricula, languages, type SubjectKey } from "@/lib/mock-data";
+
+type RatingFilter = "any" | "4.5" | "4.0" | "3.5";
+type PriceFilter = "any" | "under20" | "20to30" | "over30";
+type SortOption = "rating" | "sessions" | "price-asc" | "price-desc";
+
+const ratingOptions: { value: RatingFilter; label: string }[] = [
+  { value: "any", label: "Any rating" },
+  { value: "4.5", label: "4.5 and up" },
+  { value: "4.0", label: "4.0 and up" },
+  { value: "3.5", label: "3.5 and up" },
+];
+
+const priceOptions: { value: PriceFilter; label: string }[] = [
+  { value: "any", label: "Any price" },
+  { value: "under20", label: "Under $20/hr" },
+  { value: "20to30", label: "$20–$30/hr" },
+  { value: "over30", label: "$30+/hr" },
+];
+
+const sortOptions: { value: SortOption; label: string }[] = [
+  { value: "rating", label: "Top rated" },
+  { value: "sessions", label: "Most sessions" },
+  { value: "price-asc", label: "Price: low to high" },
+  { value: "price-desc", label: "Price: high to low" },
+];
 
 export default function BrowsePage() {
   const [query, setQuery] = useState("");
   const [activeSubject, setActiveSubject] = useState<SubjectKey | "all">("all");
+  const [curriculumFilter, setCurriculumFilter] = useState<string>("all");
+  const [languageFilter, setLanguageFilter] = useState<string>("all");
+  const [ratingFilter, setRatingFilter] = useState<RatingFilter>("any");
+  const [priceFilter, setPriceFilter] = useState<PriceFilter>("any");
+  const [sortBy, setSortBy] = useState<SortOption>("rating");
 
   const filtered = useMemo(() => {
-    return tutors.filter((tutor) => {
+    const results = tutors.filter((tutor) => {
       const matchesSubject =
         activeSubject === "all" || tutor.subjects.includes(activeSubject);
 
@@ -22,9 +54,48 @@ export default function BrowsePage() {
         tutor.name.toLowerCase().includes(q) ||
         tutor.subjects.some((s) => s.replace("-", " ").includes(q));
 
-      return matchesSubject && matchesQuery;
+      const matchesCurriculum =
+        curriculumFilter === "all" || tutor.curriculum === curriculumFilter;
+
+      const matchesLanguage =
+        languageFilter === "all" || tutor.languages.includes(languageFilter);
+
+      const matchesRating =
+        ratingFilter === "any" || tutor.rating >= parseFloat(ratingFilter);
+
+      const matchesPrice =
+        priceFilter === "any" ||
+        (priceFilter === "under20" && tutor.pricePerHour < 20) ||
+        (priceFilter === "20to30" && tutor.pricePerHour >= 20 && tutor.pricePerHour <= 30) ||
+        (priceFilter === "over30" && tutor.pricePerHour > 30);
+
+      return (
+        matchesSubject &&
+        matchesQuery &&
+        matchesCurriculum &&
+        matchesLanguage &&
+        matchesRating &&
+        matchesPrice
+      );
     });
-  }, [query, activeSubject]);
+
+    const sorted = [...results];
+    switch (sortBy) {
+      case "rating":
+        sorted.sort((a, b) => b.rating - a.rating);
+        break;
+      case "sessions":
+        sorted.sort((a, b) => b.sessions - a.sessions);
+        break;
+      case "price-asc":
+        sorted.sort((a, b) => a.pricePerHour - b.pricePerHour);
+        break;
+      case "price-desc":
+        sorted.sort((a, b) => b.pricePerHour - a.pricePerHour);
+        break;
+    }
+    return sorted;
+  }, [query, activeSubject, curriculumFilter, languageFilter, ratingFilter, priceFilter, sortBy]);
 
   return (
     <>
@@ -60,28 +131,52 @@ export default function BrowsePage() {
           ))}
         </div>
 
-        {/* Secondary filters — static for now, wire up when the schema lands */}
+        {/* Secondary filters + sort — fully wired now */}
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap gap-2">
-            {["Curriculum", "Language", "Rating", "Price"].map((label) => (
-              <button
-                key={label}
-                className="flex items-center gap-1 rounded-full border border-border bg-white px-3.5 py-1.5 text-sm text-body transition-colors hover:border-amber"
-              >
-                {label}
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </button>
-            ))}
+            <Dropdown
+              label="Curriculum"
+              showSelectedInline
+              selected={curriculumFilter}
+              onSelect={setCurriculumFilter}
+              options={[
+                { value: "all", label: "All curricula" },
+                ...curricula.map((c) => ({ value: c, label: c })),
+              ]}
+            />
+            <Dropdown
+              label="Language"
+              showSelectedInline
+              selected={languageFilter}
+              onSelect={setLanguageFilter}
+              options={[
+                { value: "all", label: "All languages" },
+                ...languages.map((l) => ({ value: l, label: l })),
+              ]}
+            />
+            <Dropdown
+              label="Rating"
+              showSelectedInline
+              selected={ratingFilter}
+              onSelect={setRatingFilter}
+              options={ratingOptions}
+            />
+            <Dropdown
+              label="Price"
+              showSelectedInline
+              selected={priceFilter}
+              onSelect={setPriceFilter}
+              options={priceOptions}
+            />
           </div>
 
-          <button className="flex items-center gap-1 text-sm text-subtle hover:text-fg">
-            Sort: <span className="font-medium text-fg">Top rated</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </button>
+          <Dropdown
+            label="Sort"
+            showSelectedInline
+            selected={sortBy}
+            onSelect={setSortBy}
+            options={sortOptions}
+          />
         </div>
 
         <p className="mt-6 mb-4 text-sm text-subtle">

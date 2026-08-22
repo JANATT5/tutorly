@@ -10,7 +10,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   careerQuizQuestions,
-  careerQuizResults,
+  careerPaths,
 } from "@/lib/mock-data";
 
 type Step = "intro" | "questions" | "results";
@@ -22,16 +22,36 @@ export default function QuizPage() {
 
   const totalQuestions = careerQuizQuestions.length;
 
-  const resultKey = useMemo(() => {
+  // Rank every tag the user's answers touched, then take the top 2–3 as
+  // suggested paths (previously this took only the single top tag, and
+  // any tag missing from careerPaths would crash the results screen —
+  // see the comment above careerPaths in lib/mock-data.ts).
+  const topPaths = useMemo(() => {
     const tally: Record<string, number> = {};
     answers.flat().forEach((tag) => {
       tally[tag] = (tally[tag] ?? 0) + 1;
     });
-    const sorted = Object.entries(tally).sort((a, b) => b[1] - a[1]);
-    return sorted[0]?.[0] ?? "cs";
+    const rankedTags = Object.entries(tally)
+      .sort((a, b) => b[1] - a[1])
+      .map(([tag]) => tag)
+      .filter((tag) => tag in careerPaths);
+
+    return rankedTags.slice(0, 3).map((tag) => careerPaths[tag]);
   }, [answers]);
 
-  const result = careerQuizResults[resultKey];
+  const combinedSubjectsToStrengthen = useMemo(() => {
+    const seen = new Set<string>();
+    const combined: (typeof topPaths)[number]["subjectsToStrengthen"] = [];
+    topPaths.forEach((path) => {
+      path.subjectsToStrengthen.forEach((subject) => {
+        if (!seen.has(subject)) {
+          seen.add(subject);
+          combined.push(subject);
+        }
+      });
+    });
+    return combined;
+  }, [topPaths]);
 
   function selectOption(tags: string[]) {
     const next = [...answers];
@@ -150,20 +170,25 @@ export default function QuizPage() {
   // -------------------------------------------------------------
   return (
     <div className="mx-auto max-w-2xl px-4 py-16 text-center sm:px-6">
-      <p className="label mb-3">Your recommended path</p>
+      <p className="label mb-3">Your recommended paths</p>
 
       <h1 className="mb-4 font-display text-3xl text-fg md:text-4xl">
-        {result.major}
+        {topPaths.length > 1 ? "A few directions worth exploring" : topPaths[0]?.title}
       </h1>
 
-      <p className="mx-auto mb-8 max-w-md text-[15px] leading-relaxed text-body">
-        {result.description}
-      </p>
+      <div className="mb-8 grid grid-cols-1 gap-4 text-left sm:grid-cols-2">
+        {topPaths.map((path) => (
+          <div key={path.title} className="rounded-2xl border border-border bg-white p-5">
+            <p className="font-display text-lg text-fg">{path.title}</p>
+            <p className="mt-2 text-sm leading-relaxed text-body">{path.description}</p>
+          </div>
+        ))}
+      </div>
 
       <div className="mb-8 rounded-2xl border border-border bg-white p-6 text-left">
         <p className="label mb-3">Subjects to strengthen</p>
         <div className="flex flex-wrap gap-2">
-          {result.subjectsToStrengthen.map((s) => (
+          {combinedSubjectsToStrengthen.map((s) => (
             <span
               key={s}
               className="rounded-full bg-secondary px-3 py-1.5 text-sm font-medium text-forest"

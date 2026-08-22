@@ -1,4 +1,11 @@
-import Link from "next/link";
+// app/(student)/layout.tsx
+//
+// Same fix as the tutor/admin layouts: this duplicated the site's own
+// Navbar with links to routes that no longer exist at all (/tutors was
+// replaced by /browse, /study-tools was removed entirely in favor of
+// flat /practice, /quiz, /planr routes) or were wrong to begin with
+// (/student/dashboard vs the real /student-dashboard). The root
+// layout's Navbar/Footer already wrap this group.
 
 export default function StudentLayout({
   children,
@@ -6,29 +13,8 @@ export default function StudentLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <Link
-            href="/"
-            className="text-2xl font-bold text-indigo-600"
-          >
-            Tutorly
-          </Link>
-
-          <nav className="flex gap-6 text-sm">
-            <Link href="/tutors">Find Tutors</Link>
-            <Link href="/study-tools">Study Tools</Link>
-            <Link href="/student/dashboard">
-              Dashboard
-            </Link>
-          </nav>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-7xl px-6 py-10">
-        {children}
-      </main>
+    <div className="min-h-screen bg-cream">
+      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-8">{children}</main>
     </div>
   );
 }

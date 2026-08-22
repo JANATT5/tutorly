@@ -1,14 +1,15 @@
 // app/tutors/[tutorId]/book/page.tsx  →  /tutors/123/book
 //
-// A "regular route (nested)" per your doc: it's fixed word "book" nested
-// under the dynamic [tutorId] segment. It still needs the tutorId (to know
-// WHO the booking is for), so it inherits that from the same [tutorId]
-// bracket folder one level up — that's why the params type looks identical
-// to the profile page.
+// Server component: looks the tutor up by id (404s if missing) and
+// renders BookingForm — a client component — for the actual
+// interactive slot-picker + contact form.
 
+import Link from "next/link";
+import { notFound } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
 import PageHeader from "@/components/layout/PageHeader";
-import PlaceholderBlock from "@/components/layout/PlaceholderBlock";
+import BookingForm from "@/components/tutors/BookingForm";
+import { tutors } from "@/lib/mock-data";
 
 type BookSessionPageProps = {
   params: Promise<{ tutorId: string }>;
@@ -17,23 +18,28 @@ type BookSessionPageProps = {
 export default async function BookSessionPage({ params }: BookSessionPageProps) {
   const { tutorId } = await params;
 
+  const tutor = tutors.find((t) => t.id === tutorId);
+  if (!tutor) notFound();
+
   return (
     <PageContainer width="narrow">
+      <Link
+        href={`/tutors/${tutor.id}`}
+        className="mb-6 inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-sm text-body transition-colors hover:border-forest hover:text-forest"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+        Back to {tutor.name}&apos;s profile
+      </Link>
+
       <PageHeader
-        eyebrow={`Booking with tutor ${tutorId}`}
+        eyebrow={`Booking with ${tutor.name}`}
         title="Book a session"
         description="No account needed — just pick a time and leave your contact info. The tutor will confirm directly."
       />
 
-      {/* Real component later: available time slots for this tutor */}
-      <div className="mb-6">
-        <PlaceholderBlock label="Available time slots" height="h-24" />
-      </div>
-
-      {/* Real component later: contact form (name, email/phone, subject, notes).
-          Remember: plain <button onClick> handlers here, not a native <form> tag,
-          per the project's build conventions. */}
-      <PlaceholderBlock label="Contact + booking details form" height="h-56" />
+      <BookingForm tutor={tutor} />
     </PageContainer>
   );
 }

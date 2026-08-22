@@ -39,6 +39,16 @@ export default async function TutorProfilePage({ params }: TutorProfilePageProps
 
   return (
     <PageContainer>
+      <Link
+        href="/browse"
+        className="mb-6 inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-sm text-body transition-colors hover:border-forest hover:text-forest"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+        Back to browse
+      </Link>
+
       <p className="mb-6 font-mono text-xs uppercase tracking-[0.14em] text-[#D47A2A]">
         Tutor profile
       </p>

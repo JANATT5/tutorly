@@ -15,18 +15,18 @@ export default function TutorCard({ tutor }: { tutor: Tutor }) {
   return (
     <Link
       href={`/tutors/${tutor.id}`}
-      className="block rounded-2xl border border-[#DDD8CF] bg-white p-5 transition-shadow hover:shadow-md">
+      className="block rounded-2xl border border-border bg-white p-5 transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={tutor.avatar}
             alt={tutor.name}
-            className="h-14 w-14 rounded-xl object-cover"
+            className="h-14 w-14 shrink-0 rounded-xl object-cover"
           />
-          <div>
-            <p className="font-display text-base text-fg">{tutor.name}</p>
-            <p className="text-xs text-subtle">{tutor.languages.join(" · ")}</p>
+          <div className="min-w-0">
+            <p className="truncate font-display text-base text-fg">{tutor.name}</p>
+            <p className="truncate text-xs text-subtle">{tutor.languages.join(" · ")}</p>
           </div>
         </div>
 
