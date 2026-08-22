@@ -8,7 +8,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PageHero from "@/components/layout/PageHero";
 import { subjects, curricula, languages } from "@/lib/mock-data";
 
@@ -23,10 +23,34 @@ export default function BecomeTutorPage() {
   const [hourlyRate, setHourlyRate] = useState("");
   const [bio, setBio] = useState("");
 
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [specificTopics, setSpecificTopics] = useState("");
   const [selectedCurricula, setSelectedCurricula] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+
+  // Revoke the previous object URL whenever the photo changes or the
+  // component unmounts, so we don't leak memory across re-selections.
+  useEffect(() => {
+    return () => {
+      if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+    };
+  }, [photoPreviewUrl]);
+
+  function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+    setPhotoFile(file);
+    setPhotoPreviewUrl(file ? URL.createObjectURL(file) : null);
+  }
+
+  function handleRemovePhoto() {
+    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+    setPhotoFile(null);
+    setPhotoPreviewUrl(null);
+  }
 
   const isStepValid =
     fullName.trim().length > 0 &&
@@ -39,13 +63,16 @@ export default function BecomeTutorPage() {
   function handleContinue() {
     if (!isStepValid) return;
     // TODO: persist step 1 and route to step 2 (verify your background)
-    // once that step is designed.
+    // once that step is designed. photoFile will need to be uploaded to
+    // real storage (Supabase Storage, per the project's planned stack)
+    // once that's wired up — for now it's just held in memory.
     console.log({
       fullName,
       email,
       phone,
       hourlyRate,
       bio,
+      photoFile,
       subjects: selectedSubjects,
       specificTopics,
       curricula: selectedCurricula,
@@ -68,6 +95,53 @@ export default function BecomeTutorPage() {
         {/* Basic information */}
         <div className="rounded-xl border border-border bg-white p-8">
           <h2 className="font-display text-2xl text-fg">Basic information</h2>
+
+          <div className="mt-6">
+            <span className="font-mono text-xs uppercase tracking-[0.14em] text-subtle">
+              Profile photo
+            </span>
+            <div className="mt-2 flex items-center gap-4">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-secondary">
+                {photoPreviewUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={photoPreviewUrl}
+                    alt="Profile preview"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="text-2xl text-subtle" aria-hidden="true">
+                    👤
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="inline-block w-fit cursor-pointer rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-fg transition-colors hover:border-forest">
+                  {photoFile ? "Change photo" : "Upload photo"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="sr-only"
+                  />
+                </label>
+                {photoFile && (
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="text-xs text-subtle underline underline-offset-2 hover:text-fg"
+                  >
+                    Remove photo
+                  </button>
+                )}
+                <p className="text-xs text-subtle">
+                  Students see this on your profile. JPG or PNG, shown however you&apos;d like to
+                  present yourself.
+                </p>
+              </div>
+            </div>
+          </div>
 
           <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
             <Field label="Full name" required>

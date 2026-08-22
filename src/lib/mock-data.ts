@@ -66,26 +66,33 @@ export type Tutor = {
   curriculum: string;
   bio: string;
   location: string;
+  experienceYears: number;
+  // ISO date string. Drives the Home page's "Recently joined" ordering —
+  // sort tutors by this field descending and take the first few, rather
+  // than hardcoding which three tutors are "featured".
+  joinedAt: string;
 };
 
 export const tutors: Tutor[] = [
   {
     id: "lara-khoury",
+    avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663829205152/YNXgfbfSBDEVExdw.png",
     name: "Lara Khoury",
-    avatar: "https://i.pravatar.cc/150?img=47",
     languages: ["Arabic", "English", "French"],
     rating: 4.9,
     sessions: 143,
     pricePerHour: 25,
     subjects: ["physics", "mathematics"],
     curriculum: "Lebanese Bac",
-    bio: "Physics grad student at AUB. Focuses on building intuition before formulas — most students say mechanics finally clicked after one session.",
+    bio: "Physics graduate from AUB with 4 years tutoring experience. I break down complex mechanics problems into simple, intuitive steps.",
     location: "Beirut",
+    experienceYears: 4,
+    joinedAt: "2026-08-18",
   },
   {
     id: "nour-abou-zeid",
+    avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663829205152/kUTsWPhxxkQBxEET.png",
     name: "Nour Abou Zeid",
-    avatar: "https://i.pravatar.cc/150?img=32",
     languages: ["Arabic", "English", "French"],
     rating: 4.9,
     sessions: 312,
@@ -94,11 +101,13 @@ export const tutors: Tutor[] = [
     curriculum: "Lebanese Bac",
     bio: "Former Lebanese Bac top-10 finisher, now tutoring full time. Specializes in exam technique for the official baccalaureate.",
     location: "Jounieh",
+    experienceYears: 6,
+    joinedAt: "2025-11-02",
   },
   {
     id: "omar-zreik",
+    avatar: "https://randomuser.me/api/portraits/men/32.jpg",
     name: "Omar Zreik",
-    avatar: "https://i.pravatar.cc/150?img=14",
     languages: ["Arabic", "English"],
     rating: 4.9,
     sessions: 76,
@@ -107,11 +116,13 @@ export const tutors: Tutor[] = [
     curriculum: "University",
     bio: "Software engineer at a Beirut fintech, teaches CS fundamentals and intro programming to university freshmen on weekends.",
     location: "Beirut",
+    experienceYears: 3,
+    joinedAt: "2025-09-14",
   },
   {
     id: "yasmine-fakhoury",
+    avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663829205152/WeWvYpaVxvjseXDy.png",
     name: "Yasmine Fakhoury",
-    avatar: "https://i.pravatar.cc/150?img=45",
     languages: ["Arabic", "English"],
     rating: 4.8,
     sessions: 98,
@@ -120,11 +131,13 @@ export const tutors: Tutor[] = [
     curriculum: "Lebanese Bac",
     bio: "Pre-med student who tutors Grade 12 biology and chemistry around her own class schedule. Big on practice questions over rote memorizing.",
     location: "Zahle",
+    experienceYears: 2,
+    joinedAt: "2025-10-05",
   },
   {
     id: "karim-haddad",
+    avatar: "https://randomuser.me/api/portraits/men/41.jpg",
     name: "Karim Haddad",
-    avatar: "https://i.pravatar.cc/150?img=51",
     languages: ["Arabic", "English", "French"],
     rating: 4.7,
     sessions: 61,
@@ -133,11 +146,13 @@ export const tutors: Tutor[] = [
     curriculum: "Grade 10-11",
     bio: "Math teacher's assistant covering algebra and pre-calc foundations for students building up to the Bac.",
     location: "Tripoli",
+    experienceYears: 5,
+    joinedAt: "2025-06-20",
   },
   {
     id: "sarah-matta",
+    avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663829205152/xeqYSnuZkSLePUst.png",
     name: "Sarah Matta",
-    avatar: "https://i.pravatar.cc/150?img=26",
     languages: ["Arabic", "English"],
     rating: 4.9,
     sessions: 204,
@@ -146,11 +161,13 @@ export const tutors: Tutor[] = [
     curriculum: "AS-Level",
     bio: "AS/A-Level chemistry specialist, previously taught at a British-curriculum school in Beirut for four years.",
     location: "Beirut",
+    experienceYears: 4,
+    joinedAt: "2025-07-18",
   },
   {
     id: "elias-nassar",
+    avatar: "https://randomuser.me/api/portraits/men/46.jpg",
     name: "Elias Nassar",
-    avatar: "https://i.pravatar.cc/150?img=60",
     languages: ["Arabic", "English"],
     rating: 4.6,
     sessions: 45,
@@ -159,11 +176,13 @@ export const tutors: Tutor[] = [
     curriculum: "University",
     bio: "CS sophomore at LAU, tutors intro programming (Python/Java) and data structures for first- and second-year students.",
     location: "Byblos",
+    experienceYears: 2,
+    joinedAt: "2025-05-03",
   },
   {
     id: "maya-saleh",
+    avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663829205152/lBzuntybaBzVUCKt.png",
     name: "Maya Saleh",
-    avatar: "https://i.pravatar.cc/150?img=39",
     languages: ["Arabic", "English", "French"],
     rating: 4.8,
     sessions: 167,
@@ -172,11 +191,13 @@ export const tutors: Tutor[] = [
     curriculum: "Lebanese Bac",
     bio: "Engineering student who scored 19/20 on the Bac physics exam. Explains problems the way she wishes they'd been explained to her.",
     location: "Saida",
+    experienceYears: 3,
+    joinedAt: "2025-08-27",
   },
   {
     id: "tarek-abdallah",
+    avatar: "https://randomuser.me/api/portraits/men/52.jpg",
     name: "Tarek Abdallah",
-    avatar: "https://i.pravatar.cc/150?img=53",
     languages: ["Arabic", "English"],
     rating: 4.5,
     sessions: 33,
@@ -185,8 +206,46 @@ export const tutors: Tutor[] = [
     curriculum: "Grade 10-11",
     bio: "Biology major, patient with beginners, mostly works with students who are just starting to build lab and exam habits.",
     location: "Nabatieh",
+    experienceYears: 1,
+    joinedAt: "2025-04-11",
+  },
+  {
+    id: "kamal-nassar",
+    avatar: "https://randomuser.me/api/portraits/men/59.jpg",
+    name: "Kamal Nassar",
+    languages: ["Arabic", "English"],
+    rating: 4.8,
+    sessions: 89,
+    pricePerHour: 30,
+    subjects: ["computer-science", "mathematics"],
+    curriculum: "University",
+    bio: "CS student at LAU specialising in algorithms. I've coached 12 students through the Lebanese Bac computer science exam.",
+    location: "Beirut",
+    experienceYears: 3,
+    joinedAt: "2026-08-15",
+  },
+  {
+    id: "rami-hamdan",
+    avatar: "https://randomuser.me/api/portraits/men/64.jpg",
+    name: "Rami Hamdan",
+    languages: ["Arabic", "English"],
+    rating: 4.6,
+    sessions: 54,
+    pricePerHour: 22,
+    subjects: ["mathematics", "computer-science"],
+    curriculum: "University",
+    bio: "Second-year CE student at USEK. I explain things the way I wish someone had explained them to me.",
+    location: "Jounieh",
+    experienceYears: 2,
+    joinedAt: "2026-08-12",
   },
 ];
+
+// Home page's "Recently joined" section — the 3 most recently joined
+// tutors, computed here rather than duplicated as sort logic in the page.
+export const featuredTutors: Tutor[] = [...tutors]
+  .sort((a, b) => (a.joinedAt < b.joinedAt ? 1 : -1))
+  .slice(0, 3);
 
 // Sub-topics and availability, keyed by tutor id — split out from the Tutor
 // type above instead of bloating every object literal. Used by the Tutor
