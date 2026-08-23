@@ -28,7 +28,11 @@ export default function PageHero({ eyebrow, title, subtitle, children }: PageHer
           Back to home
         </Link>
 
-        {eyebrow && <p className="label mb-2">{eyebrow}</p>}
+        {eyebrow && (
+          <p className="mb-2 font-mono text-xs uppercase tracking-[0.14em] text-white/80">
+            {eyebrow}
+          </p>
+        )}
 
         <h1 className="max-w-2xl font-display text-3xl text-white md:text-4xl">
           {title}

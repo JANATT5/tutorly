@@ -31,7 +31,7 @@ export default function Footer() {
         </nav>
 
         <p className="text-center text-xs text-white/60 sm:text-right">
-          Built by Mohammad Moemen Ghazzawi, Nafez &amp; Jana Tahish{" "}
+          Built by Mohammad Moemen Ghazzawi, Shaima Kaddour &amp; Jana Tahish{" "}
           <Link href="/admin-dashboard" className="underline underline-offset-2 hover:text-white">
             Admin
           </Link>

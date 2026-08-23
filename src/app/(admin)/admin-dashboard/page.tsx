@@ -12,6 +12,7 @@ import { useState } from "react";
 import PageHeader from "@/components/layout/PageHeader";
 import StatCard from "@/components/StatCard";
 import DashboardTabs, { type DashboardTab } from "@/components/DashboardTabs";
+import { adminLogout } from "@/app/admin-login/actions";
 
 const initialBookings = [
   { id: "b-1", pair: "Maya Hassan → Ahmad Khalil", detail: "Data Structures · Tomorrow · 4:00 PM" },
@@ -178,7 +179,17 @@ export default function AdminDashboardPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Admin" title="Platform dashboard" />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageHeader eyebrow="Admin" title="Platform dashboard" />
+        <form action={adminLogout}>
+          <button
+            type="submit"
+            className="rounded-lg border border-border bg-white px-4 py-2 text-sm text-body transition-colors hover:border-forest hover:text-forest"
+          >
+            Log out
+          </button>
+        </form>
+      </div>
       <DashboardTabs tabs={tabs} />
     </div>
   );

@@ -63,7 +63,7 @@ export default function PlanrPage() {
             <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
               {steps.map((step) => (
                 <div key={step.number}>
-                  <p className="font-mono text-sm text-amber">{step.number}</p>
+                  <p className="font-mono text-sm text-white/80">{step.number}</p>
                   <p className="mt-2 font-display text-xl text-white">{step.title}</p>
                 </div>
               ))}

@@ -53,7 +53,7 @@ export default function Navbar() {
           ))}
 
           <Link href="/planr">
-            <Button variant="outline" icon="+" active={pathname === "/planr"}>
+            <Button variant="outline" icon="+" active={pathname === "/planr"} onDark>
               Planr
             </Button>
           </Link>
@@ -98,7 +98,7 @@ export default function Navbar() {
             </Link>
           ))}
           <Link href="/planr" onClick={() => setMobileOpen(false)} className="py-2">
-            <Button variant="outline" icon="+" active={pathname === "/planr"}>
+            <Button variant="outline" icon="+" active={pathname === "/planr"} onDark>
               Planr
             </Button>
           </Link>

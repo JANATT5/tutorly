@@ -16,8 +16,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
-import PlaceholderBlock from "@/components/layout/PlaceholderBlock";
-import { tutors, type SubjectKey } from "@/lib/mock-data";
+import TutorProfileTabs from "@/components/tutors/TutorProfileTabs";
+import { tutors, tutorTopics, tutorAvailability, type SubjectKey } from "@/lib/mock-data";
 
 const subjectLabel: Record<SubjectKey, string> = {
   mathematics: "Mathematics",
@@ -100,21 +100,11 @@ export default async function TutorProfilePage({ params }: TutorProfilePageProps
 
       {/* Tabbed sections — Info / Subjects / Bio / Availability.
           These are tabs on THIS page, not separate routes, per the sitemap. */}
-      <div className="mt-8 flex gap-6 border-b border-border font-mono text-xs uppercase tracking-wide text-subtle">
-        <span className="border-b-2 border-forest pb-3 text-forest">Info</span>
-        <span className="pb-3">Subjects</span>
-        <span className="pb-3">Bio</span>
-        <span className="pb-3">Availability</span>
-      </div>
-
-      <div className="mt-6 rounded-xl border border-border bg-white p-6">
-        <p className="text-sm leading-relaxed text-body">{tutor.bio}</p>
-      </div>
-
-      {/* Real component later: Availability tab content (calendar/slots) */}
-      <div className="mt-6">
-        <PlaceholderBlock label="Availability tab (calendar / open slots)" height="h-32" />
-      </div>
+      <TutorProfileTabs
+        tutor={tutor}
+        topics={tutorTopics[tutor.id] ?? []}
+        availability={tutorAvailability[tutor.id] ?? []}
+      />
 
       <div className="mt-8">
         <Link

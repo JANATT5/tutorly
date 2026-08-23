@@ -212,7 +212,7 @@ export default function HomePage() {
             className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/5"
           />
 
-          <p className="font-mono text-xs uppercase tracking-[0.14em] text-amber">
+          <p className="font-mono text-xs uppercase tracking-[0.14em] text-white/80">
             Grade 12 · Career guidance
           </p>
           <h2 className="mt-4 max-w-lg font-display text-3xl text-white md:text-4xl">

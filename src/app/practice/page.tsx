@@ -1,12 +1,12 @@
 // app/practice/page.tsx  →  /practice
 //
-// Banner pattern (matches Browse / Become-a-tutor). Subject + level
-// selection are local state; the summary panel reads the real question
-// count from lib/mock-data instead of hardcoding "10" the way the Figma
-// copy does — when a subject/level combo has no seeded questions yet,
-// "Start test" disables rather than promising a test that doesn't exist.
-// Same philosophy as the note in app/browse/page.tsx: flag missing data
-// clearly instead of faking interactivity.
+// Banner pattern (matches Browse / Become-a-tutor). Previously "Start
+// test" had no onClick handler at all — it rendered as a button but
+// did nothing, because only the setup screen (subject/level pickers +
+// summary) was ever built. This adds the actual test-taking flow:
+// setup → test (one question at a time) → results (score + review).
+// Same local step-state pattern as the Career Quiz, since nothing here
+// needs its own URL.
 
 "use client";
 
@@ -15,22 +15,188 @@ import PageHero from "@/components/layout/PageHero";
 import { subjects, levels, practiceQuestions, type SubjectKey } from "@/lib/mock-data";
 
 type Level = (typeof levels)[number];
+type Mode = "setup" | "test" | "results";
 
 export default function PracticePage() {
+  const [mode, setMode] = useState<Mode>("setup");
   const [subjectKey, setSubjectKey] = useState<SubjectKey>("physics");
   const [level, setLevel] = useState<Level>("Grade 12 (Lebanese Bac)");
+
+  // Test-taking state
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedAnswers, setSelectedAnswers] = useState<(number | null)[]>([]);
+  const [selectedThisQuestion, setSelectedThisQuestion] = useState<number | null>(null);
 
   const subject = subjects.find((s) => s.key === subjectKey)!;
 
   const matchingQuestions = useMemo(
-    () =>
-      practiceQuestions.filter((q) => q.subject === subjectKey && q.level === level),
+    () => practiceQuestions.filter((q) => q.subject === subjectKey && q.level === level),
     [subjectKey, level]
   );
 
   const questionCount = matchingQuestions.length;
   const hasQuestions = questionCount > 0;
 
+  function handleStartTest() {
+    if (!hasQuestions) return;
+    setCurrentIndex(0);
+    setSelectedAnswers(new Array(matchingQuestions.length).fill(null));
+    setSelectedThisQuestion(null);
+    setMode("test");
+  }
+
+  function handleSelectOption(optionIndex: number) {
+    setSelectedThisQuestion(optionIndex);
+  }
+
+  function handleNextQuestion() {
+    const updated = [...selectedAnswers];
+    updated[currentIndex] = selectedThisQuestion;
+    setSelectedAnswers(updated);
+
+    if (currentIndex + 1 < matchingQuestions.length) {
+      setCurrentIndex(currentIndex + 1);
+      setSelectedThisQuestion(updated[currentIndex + 1] ?? null);
+    } else {
+      setMode("results");
+    }
+  }
+
+  function handleRetake() {
+    setMode("setup");
+  }
+
+  const score = useMemo(() => {
+    return selectedAnswers.reduce<number>((total, answer, index) => {
+      return answer === matchingQuestions[index]?.correctIndex ? total + 1 : total;
+    }, 0);
+  }, [selectedAnswers, matchingQuestions]);
+
+  // -----------------------------------------------------------------
+  // Test-taking screen
+  // -----------------------------------------------------------------
+  if (mode === "test") {
+    const question = matchingQuestions[currentIndex];
+
+    return (
+      <>
+        <PageHero
+          eyebrow={`Practice · ${subject.label}`}
+          title={`Question ${currentIndex + 1} of ${matchingQuestions.length}`}
+        />
+
+        <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
+            <div
+              className="h-full rounded-full bg-forest transition-all"
+              style={{
+                width: `${((currentIndex + 1) / matchingQuestions.length) * 100}%`,
+              }}
+            />
+          </div>
+
+          <p className="mt-8 whitespace-pre-line font-display text-xl text-fg">
+            {question.prompt}
+          </p>
+
+          <div className="mt-6 space-y-3">
+            {question.options.map((option, index) => {
+              const isSelected = selectedThisQuestion === index;
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => handleSelectOption(index)}
+                  aria-pressed={isSelected}
+                  className={`block w-full rounded-xl border p-4 text-left text-sm transition-colors ${
+                    isSelected
+                      ? "border-forest bg-secondary text-fg"
+                      : "border-border bg-white text-fg hover:border-forest"
+                  }`}
+                >
+                  {option}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleNextQuestion}
+            disabled={selectedThisQuestion === null}
+            className="mt-8 w-full rounded-full bg-forest px-7 py-4 text-sm font-semibold text-white transition-colors hover:bg-forest-dark disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {currentIndex + 1 < matchingQuestions.length ? "Next question →" : "See results →"}
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  // -----------------------------------------------------------------
+  // Results screen
+  // -----------------------------------------------------------------
+  if (mode === "results") {
+    return (
+      <>
+        <PageHero eyebrow="Practice results" title={`You scored ${score} / ${matchingQuestions.length}`} />
+
+        <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
+          <div className="space-y-4">
+            {matchingQuestions.map((question, index) => {
+              const userAnswer = selectedAnswers[index];
+              const isCorrect = userAnswer === question.correctIndex;
+              return (
+                <div key={question.id} className="rounded-xl border border-border bg-white p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="whitespace-pre-line text-sm font-medium text-fg">
+                      {question.prompt}
+                    </p>
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        isCorrect ? "bg-forest/10 text-forest" : "bg-[#FBE9E7] text-[#B3261E]"
+                      }`}
+                    >
+                      {isCorrect ? "Correct" : "Incorrect"}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-subtle">
+                    Correct answer: {question.options[question.correctIndex]}
+                  </p>
+                  {!isCorrect && userAnswer !== null && (
+                    <p className="mt-1 text-sm text-[#B3261E]">
+                      Your answer: {question.options[userAnswer]}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-8 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handleStartTest}
+              className="rounded-full bg-forest px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-forest-dark"
+            >
+              Retake this test
+            </button>
+            <button
+              type="button"
+              onClick={handleRetake}
+              className="rounded-full border border-border bg-white px-6 py-3 text-sm font-medium text-fg transition-colors hover:border-forest"
+            >
+              Choose a different subject
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // -----------------------------------------------------------------
+  // Setup screen
+  // -----------------------------------------------------------------
   return (
     <>
       <PageHero eyebrow="Practice" title="Sharpen your skills before the test" />
@@ -119,6 +285,7 @@ export default function PracticePage() {
           </div>
           <button
             type="button"
+            onClick={handleStartTest}
             disabled={!hasQuestions}
             className="rounded-full bg-amber px-7 py-3.5 text-sm font-semibold text-fg transition-colors hover:bg-amber-hover disabled:cursor-not-allowed disabled:opacity-50"
           >

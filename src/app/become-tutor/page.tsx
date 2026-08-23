@@ -1,32 +1,35 @@
 // app/become-tutor/page.tsx  →  /become-tutor
 //
-// Full 4-step wizard: Basic information + What you teach (step 1,
-// matches the Figma reference exactly), then Verify your background,
-// Availability, and Review & submit — steps 2–4 weren't designed in
-// Figma yet, so these are built to a sensible, functional standard
-// rather than a pixel spec. Steps are local component state (like
-// the Career Quiz's intro/questions/results pattern — see the "Nav
-// Data Gotcha" note in app/quiz/page.tsx) rather than separate routes,
-// since nothing here needs to be independently bookmarkable and a
-// single page keeps all the form state in one place with no data
-// passed across a navigation boundary.
+// Redesigned 4-step flow:
+//   1. All your info — basic details, what you teach, availability
+//   2. Certificates — AI screens for authenticity
+//   3. Teaching videos (4+) — AI screens for real teaching content
+//   4. Review & submit
+//
+// Two-stage approval, on purpose: passing the AI checks in steps 2–3
+// only clears the *AI* gate. Submitting in step 4 always lands on
+// "pending admin review" — never an immediate "approved" — because a
+// human still makes the final call. There's no backend yet (see the
+// TODO in handleSubmit), so "AI analysis" is a simulated delay with a
+// weighted random outcome — see components/become-tutor/CertificateStep
+// and VideoStep for that logic.
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import PageHero from "@/components/layout/PageHero";
 import { subjects, curricula, languages } from "@/lib/mock-data";
+import CertificateStep, {
+  isCertificateStepValid,
+  type Certificate,
+} from "@/components/become-tutor/CertificateStep";
+import VideoStep, {
+  isVideoStepValid,
+  type TeachingVideo,
+} from "@/components/become-tutor/VideoStep";
 
 type Step = 1 | 2 | 3 | 4 | "submitted";
-
-const qualificationOptions = [
-  "High school diploma",
-  "Currently enrolled — university student",
-  "Bachelor's degree",
-  "Master's degree",
-  "PhD",
-] as const;
 
 const dayOptions = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const timeOfDayOptions = ["Mornings", "Afternoons", "Evenings"] as const;
@@ -41,7 +44,7 @@ const inputClasses =
 export default function BecomeTutorPage() {
   const [step, setStep] = useState<Step>(1);
 
-  // Step 1 — Basic information + What you teach
+  // Step 1 — everything about the applicant
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -53,23 +56,14 @@ export default function BecomeTutorPage() {
   const [specificTopics, setSpecificTopics] = useState("");
   const [selectedCurricula, setSelectedCurricula] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
-
-  // Step 2 — Verify your background
-  const [idDocument, setIdDocument] = useState<File | null>(null);
-  const [qualification, setQualification] = useState<string>("");
-  const [institution, setInstitution] = useState("");
-  const [yearsExperience, setYearsExperience] = useState("");
-
-  // Step 3 — Availability
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [selectedTimesOfDay, setSelectedTimesOfDay] = useState<string[]>([]);
-  const [availabilityNotes, setAvailabilityNotes] = useState("");
 
-  useEffect(() => {
-    return () => {
-      if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
-    };
-  }, [photoPreviewUrl]);
+  // Step 2 — certificates
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
+
+  // Step 3 — teaching videos
+  const [videos, setVideos] = useState<TeachingVideo[]>([]);
 
   function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
@@ -90,18 +84,19 @@ export default function BecomeTutorPage() {
     phone.trim().length > 0 &&
     hourlyRate.trim().length > 0 &&
     bio.trim().length > 0 &&
-    selectedSubjects.length > 0;
+    selectedSubjects.length > 0 &&
+    selectedDays.length > 0 &&
+    selectedTimesOfDay.length > 0;
 
-  const isStep2Valid =
-    idDocument !== null && qualification.length > 0 && institution.trim().length > 0;
-
-  const isStep3Valid = selectedDays.length > 0 && selectedTimesOfDay.length > 0;
+  const isStep2Valid = isCertificateStepValid(certificates);
+  const isStep3Valid = isVideoStepValid(videos);
 
   function handleSubmit() {
-    // TODO: send the full application to the backend once it exists
-    // (Prisma/Supabase, per the project's planned stack). photoFile and
-    // idDocument will need real file storage — for now everything just
-    // lives in memory for this session.
+    // TODO: send the full application to the backend once it exists.
+    // photoFile, certificates, and videos will need real file storage.
+    // Status is always "pending_admin_review" on submit — AI passing
+    // steps 2–3 clears the AI gate, but an admin still makes the final
+    // call (see (admin)/admin-dashboard's Verification tab).
     console.log({
       fullName,
       email,
@@ -113,11 +108,13 @@ export default function BecomeTutorPage() {
       specificTopics,
       curricula: selectedCurricula,
       languages: selectedLanguages,
-      idDocument,
-      qualification,
-      institution,
-      yearsExperience,
-      availability: { days: selectedDays, timesOfDay: selectedTimesOfDay, notes: availabilityNotes },
+      availability: { days: selectedDays, timesOfDay: selectedTimesOfDay },
+      certificates: certificates.map((c) => ({ name: c.file.name, status: c.status })),
+      videos: videos.map((v) => ({
+        source: v.source.type === "file" ? v.source.file.name : v.source.url,
+        status: v.status,
+      })),
+      status: "pending_admin_review",
     });
     setStep("submitted");
   }
@@ -127,15 +124,18 @@ export default function BecomeTutorPage() {
       <>
         <PageHero eyebrow="For tutors" title="Application submitted" />
         <div className="mx-auto max-w-2xl px-4 py-16 text-center sm:px-6">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-3xl">
-            ✅
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber/15 text-3xl">
+            🕐
           </div>
-          <h2 className="font-display text-2xl text-fg">Thanks, {fullName || "there"}!</h2>
+          <h2 className="font-display text-2xl text-fg">Almost there, {fullName || "there"}!</h2>
           <p className="mt-3 text-body">
-            We&apos;ve received your application. Our team typically reviews new tutor
-            applications within 2–3 business days — we&apos;ll email you at{" "}
-            <span className="font-medium text-fg">{email || "your address"}</span> once it&apos;s
-            approved.
+            Your certificates and teaching videos passed our AI screening — but that&apos;s only
+            the first check. A member of our team now reviews every application by hand before
+            it&apos;s approved, so you&apos;re not live on Tutorly just yet.
+          </p>
+          <p className="mt-3 text-sm text-subtle">
+            We&apos;ll email {email || "you"} once an admin has made a final decision — usually
+            within 2–3 business days.
           </p>
           <Link
             href="/"
@@ -214,10 +214,6 @@ export default function BecomeTutorPage() {
                         Remove photo
                       </button>
                     )}
-                    <p className="text-xs text-subtle">
-                      Students see this on your profile. JPG or PNG, shown however you&apos;d
-                      like to present yourself.
-                    </p>
                   </div>
                 </div>
               </div>
@@ -321,109 +317,8 @@ export default function BecomeTutorPage() {
               />
             </div>
 
-            <button
-              type="button"
-              onClick={() => isStep1Valid && setStep(2)}
-              disabled={!isStep1Valid}
-              className="mt-8 w-full rounded-full bg-forest px-7 py-4 text-sm font-semibold text-white transition-colors hover:bg-forest-dark disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Continue: verify your background →
-            </button>
-          </>
-        )}
-
-        {step === 2 && (
-          <>
-            <div className="rounded-xl border border-border bg-white p-8">
-              <h2 className="font-display text-2xl text-fg">Verify your background</h2>
-              <p className="mt-2 text-sm text-subtle">
-                This helps students trust who they&apos;re booking with. Your ID is never shown
-                publicly.
-              </p>
-
-              <div className="mt-6">
-                <span className="font-mono text-xs uppercase tracking-[0.14em] text-subtle">
-                  ID document <span className="text-amber">*</span>
-                </span>
-                <div className="mt-2 flex items-center gap-4">
-                  <label className="inline-block w-fit cursor-pointer rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-fg transition-colors hover:border-forest">
-                    {idDocument ? "Change file" : "Upload ID"}
-                    <input
-                      type="file"
-                      accept="image/*,.pdf"
-                      onChange={(e) => setIdDocument(e.target.files?.[0] ?? null)}
-                      className="sr-only"
-                    />
-                  </label>
-                  {idDocument && (
-                    <span className="text-sm text-body">{idDocument.name}</span>
-                  )}
-                </div>
-                <p className="mt-2 text-xs text-subtle">
-                  A national ID, passport, or student ID. JPG, PNG, or PDF.
-                </p>
-              </div>
-
-              <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <Field label="Highest qualification" required>
-                  <select
-                    value={qualification}
-                    onChange={(e) => setQualification(e.target.value)}
-                    className={inputClasses}
-                  >
-                    <option value="" disabled>
-                      Select one
-                    </option>
-                    {qualificationOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-
-                <Field label="Institution" required>
-                  <input
-                    type="text"
-                    value={institution}
-                    onChange={(e) => setInstitution(e.target.value)}
-                    placeholder="e.g. American University of Beirut"
-                    className={inputClasses}
-                  />
-                </Field>
-
-                <Field label="Years of teaching experience">
-                  <input
-                    type="number"
-                    min={0}
-                    value={yearsExperience}
-                    onChange={(e) => setYearsExperience(e.target.value)}
-                    placeholder="2"
-                    className={inputClasses}
-                  />
-                </Field>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => isStep2Valid && setStep(3)}
-              disabled={!isStep2Valid}
-              className="mt-8 w-full rounded-full bg-forest px-7 py-4 text-sm font-semibold text-white transition-colors hover:bg-forest-dark disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Continue: set your availability →
-            </button>
-          </>
-        )}
-
-        {step === 3 && (
-          <>
-            <div className="rounded-xl border border-border bg-white p-8">
+            <div className="mt-8 rounded-xl border border-border bg-white p-8">
               <h2 className="font-display text-2xl text-fg">Availability</h2>
-              <p className="mt-2 text-sm text-subtle">
-                A general sense of when you&apos;re free — students will request specific times
-                within this once you&apos;re live.
-              </p>
 
               <p className="mt-6 font-mono text-xs uppercase tracking-[0.14em] text-subtle">
                 Days <span className="text-amber">*</span>
@@ -442,20 +337,36 @@ export default function BecomeTutorPage() {
                 selected={selectedTimesOfDay}
                 onToggle={(value) => setSelectedTimesOfDay((prev) => togglePill(prev, value))}
               />
-
-              <div className="mt-6">
-                <Field label="Anything else students should know?">
-                  <textarea
-                    value={availabilityNotes}
-                    onChange={(e) => setAvailabilityNotes(e.target.value)}
-                    placeholder="e.g. Not available during exam weeks in June"
-                    rows={3}
-                    className={`${inputClasses} resize-none`}
-                  />
-                </Field>
-              </div>
             </div>
 
+            <button
+              type="button"
+              onClick={() => isStep1Valid && setStep(2)}
+              disabled={!isStep1Valid}
+              className="mt-8 w-full rounded-full bg-forest px-7 py-4 text-sm font-semibold text-white transition-colors hover:bg-forest-dark disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Continue: verify your certificates →
+            </button>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <CertificateStep certificates={certificates} onChange={setCertificates} />
+            <button
+              type="button"
+              onClick={() => isStep2Valid && setStep(3)}
+              disabled={!isStep2Valid}
+              className="mt-8 w-full rounded-full bg-forest px-7 py-4 text-sm font-semibold text-white transition-colors hover:bg-forest-dark disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Continue: upload teaching videos →
+            </button>
+          </>
+        )}
+
+        {step === 3 && (
+          <>
+            <VideoStep videos={videos} onChange={setVideos} />
             <button
               type="button"
               onClick={() => isStep3Valid && setStep(4)}
@@ -471,6 +382,10 @@ export default function BecomeTutorPage() {
           <>
             <div className="rounded-xl border border-border bg-white p-8">
               <h2 className="font-display text-2xl text-fg">Review &amp; submit</h2>
+              <p className="mt-2 text-sm text-subtle">
+                Passing the AI checks below is the first step, not the last — an admin still
+                reviews every application before it goes live.
+              </p>
 
               <ReviewSection title="Basic information">
                 <ReviewRow label="Name" value={fullName} />
@@ -485,18 +400,27 @@ export default function BecomeTutorPage() {
                 <ReviewRow label="Languages" value={selectedLanguages.join(", ")} />
               </ReviewSection>
 
-              <ReviewSection title="Background">
-                <ReviewRow label="Qualification" value={qualification} />
-                <ReviewRow label="Institution" value={institution} />
-                <ReviewRow
-                  label="ID document"
-                  value={idDocument ? idDocument.name : "Not uploaded"}
-                />
-              </ReviewSection>
-
               <ReviewSection title="Availability">
                 <ReviewRow label="Days" value={selectedDays.join(", ")} />
                 <ReviewRow label="Time of day" value={selectedTimesOfDay.join(", ")} />
+              </ReviewSection>
+
+              <ReviewSection title="Certificates">
+                <ReviewRow
+                  label="AI check"
+                  value={`${certificates.length} uploaded, ${
+                    certificates.filter((c) => c.status === "verified").length
+                  } verified`}
+                />
+              </ReviewSection>
+
+              <ReviewSection title="Teaching videos">
+                <ReviewRow
+                  label="AI check"
+                  value={`${videos.length} uploaded, ${
+                    videos.filter((v) => v.status === "verified").length
+                  } verified`}
+                />
               </ReviewSection>
             </div>
 
