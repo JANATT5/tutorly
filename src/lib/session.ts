@@ -19,9 +19,9 @@ export const USERNAME_COOKIE = "tutorly_username";
 // admin/1234 → role admin, tutor/1234 → role tutor, student/1234 →
 // role student. Real credential checking is backend work for later.
 export const STATIC_CREDENTIALS: { username: string; password: string; role: UserRole }[] = [
-  { username: "admin", password: "1234", role: "admin" },
-  { username: "tutor", password: "1234", role: "tutor" },
-  { username: "student", password: "1234", role: "student" },
+  { username: "test", password: "1234", role: "student" },
+  { username: "tutor1", password: "1234", role: "tutor" },
+  { username: "admin", password: "tutorly-admin", role: "admin" },
 ];
 
 export function checkCredentials(username: string, password: string): UserRole | null {

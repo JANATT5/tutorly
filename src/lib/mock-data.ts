@@ -1412,6 +1412,52 @@ export const adminDashboardStats = [
 ];
 
 // ---------------------------------------------------------------------------
+// dashboardData — the single source of truth /dashboard reads from.
+// Structure matches what the professor asked for exactly: one array,
+// each entry tagged with a role, selected via
+// `dashboardData.find(d => d.role === session.role)`. This is
+// deliberately still static/dummy data — a real API for this is next
+// sprint's work, not now.
+// ---------------------------------------------------------------------------
+
+export type DashboardRoleData = {
+  role: "admin" | "tutor" | "student";
+  data: Record<string, string | number>;
+};
+
+export const dashboardData: DashboardRoleData[] = [
+  {
+    role: "admin",
+    data: {
+      totalUsers: 248,
+      totalTutors: 46,
+      totalStudents: 202,
+      pendingVerification: 5,
+      bookingsThisWeek: 31,
+    },
+  },
+  {
+    role: "tutor",
+    data: {
+      upcomingSessions: 6,
+      students: 23,
+      courses: 3,
+      rating: "4.9 ★",
+      earningsThisMonth: 410,
+    },
+  },
+  {
+    role: "student",
+    data: {
+      upcomingSessions: 2,
+      completedCourses: 14,
+      practiceAvgScore: "76%",
+      planrProgress: "30%",
+    },
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Tutor applications  (admin review queue)
 // ---------------------------------------------------------------------------
 

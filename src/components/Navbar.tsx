@@ -1,18 +1,18 @@
 // components/Navbar.tsx
 //
 // The single site-wide nav, mounted once in app/layout.tsx above
-// {children}. This replaces the old AppShell.tsx (now deleted) — the
-// two had drifted into different link sets, so this is the merged,
-// canonical version matching the Figma nav exactly: Find a tutor,
-// Practice, Career quiz, a Planr pill (outline button, filled when
-// active), and a solid Become a tutor CTA.
+// {children}. Matches the Figma nav: Find a tutor, Practice, Career
+// quiz, a Planr pill, and a solid Become a tutor CTA — plus a
+// Log in / Dashboard+Log out link that reflects actual session state
+// (via lib/session.ts), previously missing entirely.
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Button from "./Button";
+import { getUserRole, clearSession, type UserRole } from "@/lib/session";
 
 type NavItem = {
   label: string;
@@ -25,9 +25,33 @@ const navLinks: NavItem[] = [
   { label: "Career quiz", href: "/quiz" },
 ];
 
-export default function Navbar() {
+type NavbarProps = {
+  // Read server-side (see app/layout.tsx) so the very first HTML
+  // already reflects real auth state — a client-only document.cookie
+  // read would always render logged-out on the server, since
+  // `document` doesn't exist there, causing a hydration mismatch.
+  initialRole: UserRole | null;
+};
+
+export default function Navbar({ initialRole }: NavbarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [role, setRole] = useState<UserRole | null>(initialRole);
+
+  // Re-sync from the cookie on every client-side navigation, so
+  // logging in/out (which both navigate afterward) is reflected
+  // without needing a full page reload.
+  useEffect(() => {
+    setRole(getUserRole());
+  }, [pathname]);
+
+  function handleLogout() {
+    clearSession();
+    setRole(null);
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-forest">
@@ -61,6 +85,33 @@ export default function Navbar() {
           <Link href="/become-tutor">
             <Button variant="primary">Become a tutor</Button>
           </Link>
+
+          {role ? (
+            <div className="flex items-center gap-4 border-l border-white/20 pl-6">
+              <Link
+                href="/dashboard"
+                className={`transition-colors ${
+                  pathname === "/dashboard" ? "text-white" : "text-white/70 hover:text-white"
+                }`}
+              >
+                Dashboard
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="text-white/70 transition-colors hover:text-white"
+              >
+                Log out
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="border-l border-white/20 pl-6 text-white/70 transition-colors hover:text-white"
+            >
+              Log in
+            </Link>
+          )}
         </nav>
 
         {/* Mobile hamburger */}
@@ -105,6 +156,36 @@ export default function Navbar() {
           <Link href="/become-tutor" onClick={() => setMobileOpen(false)} className="py-2">
             <Button variant="primary">Become a tutor</Button>
           </Link>
+
+          {role ? (
+            <div className="mt-2 flex flex-col gap-1 border-t border-white/10 pt-2">
+              <Link
+                href="/dashboard"
+                onClick={() => setMobileOpen(false)}
+                className="py-2.5 text-sm font-medium text-white/70"
+              >
+                Dashboard
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileOpen(false);
+                  handleLogout();
+                }}
+                className="py-2.5 text-left text-sm font-medium text-white/70"
+              >
+                Log out
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              onClick={() => setMobileOpen(false)}
+              className="mt-2 border-t border-white/10 py-2.5 pt-4 text-sm font-medium text-white/70"
+            >
+              Log in
+            </Link>
+          )}
         </div>
       )}
     </header>

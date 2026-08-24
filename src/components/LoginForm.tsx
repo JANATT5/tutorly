@@ -133,9 +133,9 @@ export default function LoginForm() {
       <div className="mt-6 rounded-lg border border-border bg-secondary/40 p-4 text-xs text-subtle">
         <p className="font-mono uppercase tracking-[0.1em] text-subtle">Demo accounts</p>
         <p className="mt-2">
-          <code className="rounded bg-white px-1.5 py-0.5">admin / 1234</code> ·{" "}
-          <code className="rounded bg-white px-1.5 py-0.5">tutor / 1234</code> ·{" "}
-          <code className="rounded bg-white px-1.5 py-0.5">student / 1234</code>
+          <code className="rounded bg-white px-1.5 py-0.5">test / 1234</code> ·{" "}
+          <code className="rounded bg-white px-1.5 py-0.5">tutor1 / 1234</code> ·{" "}
+          <code className="rounded bg-white px-1.5 py-0.5">admin / tutorly-admin</code>
         </p>
       </div>
     </form>
