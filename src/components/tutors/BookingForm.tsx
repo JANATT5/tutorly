@@ -1,9 +1,10 @@
 // components/tutors/BookingForm.tsx
 //
-// The actual interactive part of /tutors/[tutorId]/book — split out
-// from the page itself because the page needs to stay a server
-// component (it looks the tutor up by id and 404s if missing), while
-// this needs client-side state for the slot picker and form fields.
+// Restructured to follow Type → Initial State → Validation → Handling.
+// Also fixes a real gap the old version had: the submit button was
+// just silently disabled with no explanation of which field was
+// missing — now validation errors actually render per field.
+//
 // No backend exists yet, so "submitting" generates a mock booking id
 // and navigates to the confirmation route with the chosen details as
 // query params — enough for that screen to show something real rather
@@ -33,32 +34,63 @@ function generateBookingId(): string {
 const inputClasses =
   "w-full rounded-lg border border-border bg-white px-4 py-3 text-fg placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-forest";
 
+// ---- Type ----
+type BookingFormData = {
+  day: string;
+  time: string;
+  subject: SubjectKey | "";
+  studentName: string;
+  contact: string;
+  notes: string;
+};
+
+type BookingFormErrors = Partial<Record<keyof BookingFormData, string>>;
+
+// ---- Initialization ----
+const initialBookingFormData: BookingFormData = {
+  day: "",
+  time: "",
+  subject: "",
+  studentName: "",
+  contact: "",
+  notes: "",
+};
+
+// ---- Validation ----
+function validateBookingForm(data: BookingFormData): BookingFormErrors {
+  const errors: BookingFormErrors = {};
+  if (!data.day) errors.day = "Pick a day.";
+  if (!data.time) errors.time = "Pick a time.";
+  if (!data.subject) errors.subject = "Select a subject.";
+  if (!data.studentName.trim()) errors.studentName = "Your name is required.";
+  if (!data.contact.trim()) errors.contact = "An email or phone number is required.";
+  return errors;
+}
+
 export default function BookingForm({ tutor }: { tutor: Tutor }) {
   const router = useRouter();
+  const [formData, setFormData] = useState<BookingFormData>(initialBookingFormData);
+  const [errors, setErrors] = useState<BookingFormErrors>({});
 
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [subject, setSubject] = useState<SubjectKey | "">("");
-  const [studentName, setStudentName] = useState("");
-  const [contact, setContact] = useState("");
-  const [notes, setNotes] = useState("");
+  function handleChange<K extends keyof BookingFormData>(field: K, value: BookingFormData[K]) {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  }
 
-  const isValid =
-    selectedDay !== null &&
-    selectedTime !== null &&
-    subject !== "" &&
-    studentName.trim().length > 0 &&
-    contact.trim().length > 0;
-
+  // ---- Handling ----
   function handleSubmit() {
-    if (!isValid) return;
+    const validationErrors = validateBookingForm(formData);
+    setErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
 
     const bookingId = generateBookingId();
     const params = new URLSearchParams({
       bookingId,
-      subject,
-      day: selectedDay!,
-      time: selectedTime!,
+      subject: formData.subject,
+      day: formData.day,
+      time: formData.time,
     });
     router.push(`/tutors/${tutor.id}/book/confirmation?${params.toString()}`);
   }
@@ -76,10 +108,10 @@ export default function BookingForm({ tutor }: { tutor: Tutor }) {
             <button
               key={day}
               type="button"
-              onClick={() => setSelectedDay(day)}
-              aria-pressed={selectedDay === day}
+              onClick={() => handleChange("day", day)}
+              aria-pressed={formData.day === day}
               className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                selectedDay === day
+                formData.day === day
                   ? "bg-forest text-white"
                   : "border border-border bg-white text-fg hover:border-forest"
               }`}
@@ -88,16 +120,17 @@ export default function BookingForm({ tutor }: { tutor: Tutor }) {
             </button>
           ))}
         </div>
+        {errors.day && <p className="mt-2 text-xs text-[#B3261E]">{errors.day}</p>}
 
         <div className="mt-4 flex flex-wrap gap-2">
           {timeSlots.map((time) => (
             <button
               key={time}
               type="button"
-              onClick={() => setSelectedTime(time)}
-              aria-pressed={selectedTime === time}
+              onClick={() => handleChange("time", time)}
+              aria-pressed={formData.time === time}
               className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                selectedTime === time
+                formData.time === time
                   ? "bg-forest text-white"
                   : "border border-border bg-white text-fg hover:border-forest"
               }`}
@@ -106,6 +139,7 @@ export default function BookingForm({ tutor }: { tutor: Tutor }) {
             </button>
           ))}
         </div>
+        {errors.time && <p className="mt-2 text-xs text-[#B3261E]">{errors.time}</p>}
       </div>
 
       {/* Contact + booking details */}
@@ -120,8 +154,8 @@ export default function BookingForm({ tutor }: { tutor: Tutor }) {
               Subject <span className="text-amber">*</span>
             </span>
             <select
-              value={subject}
-              onChange={(e) => setSubject(e.target.value as SubjectKey)}
+              value={formData.subject}
+              onChange={(e) => handleChange("subject", e.target.value as SubjectKey)}
               className={`${inputClasses} mt-2`}
             >
               <option value="" disabled>
@@ -133,6 +167,9 @@ export default function BookingForm({ tutor }: { tutor: Tutor }) {
                 </option>
               ))}
             </select>
+            {errors.subject && (
+              <p className="mt-1 text-xs text-[#B3261E]">{errors.subject}</p>
+            )}
           </label>
 
           <label className="block">
@@ -141,11 +178,14 @@ export default function BookingForm({ tutor }: { tutor: Tutor }) {
             </span>
             <input
               type="text"
-              value={studentName}
-              onChange={(e) => setStudentName(e.target.value)}
+              value={formData.studentName}
+              onChange={(e) => handleChange("studentName", e.target.value)}
               placeholder="Full name"
               className={`${inputClasses} mt-2`}
             />
+            {errors.studentName && (
+              <p className="mt-1 text-xs text-[#B3261E]">{errors.studentName}</p>
+            )}
           </label>
 
           <label className="block">
@@ -154,11 +194,14 @@ export default function BookingForm({ tutor }: { tutor: Tutor }) {
             </span>
             <input
               type="text"
-              value={contact}
-              onChange={(e) => setContact(e.target.value)}
+              value={formData.contact}
+              onChange={(e) => handleChange("contact", e.target.value)}
               placeholder="you@example.com or +961 70 000 000"
               className={`${inputClasses} mt-2`}
             />
+            {errors.contact && (
+              <p className="mt-1 text-xs text-[#B3261E]">{errors.contact}</p>
+            )}
           </label>
 
           <label className="block">
@@ -166,8 +209,8 @@ export default function BookingForm({ tutor }: { tutor: Tutor }) {
               Notes for the tutor
             </span>
             <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              value={formData.notes}
+              onChange={(e) => handleChange("notes", e.target.value)}
               placeholder="What would you like to focus on?"
               rows={3}
               className={`${inputClasses} mt-2 resize-none`}
@@ -179,8 +222,7 @@ export default function BookingForm({ tutor }: { tutor: Tutor }) {
       <button
         type="button"
         onClick={handleSubmit}
-        disabled={!isValid}
-        className="mt-6 w-full rounded-full bg-forest px-7 py-4 text-sm font-semibold text-white transition-colors hover:bg-forest-dark disabled:cursor-not-allowed disabled:opacity-50"
+        className="mt-6 w-full rounded-full bg-forest px-7 py-4 text-sm font-semibold text-white transition-colors hover:bg-forest-dark"
       >
         Request session →
       </button>

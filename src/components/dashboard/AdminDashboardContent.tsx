@@ -1,10 +1,13 @@
-// app/(admin)/admin-dashboard/page.tsx  →  /admin-dashboard
+// components/dashboards/AdminDashboardContent.tsx
 //
-// Consolidates what used to be 6 separate routes (admin-dashboard,
-// /bookings, /courses, /reports, /users, /verification) into one page
-// with tabs — same pattern as the Tutor dashboard consolidation.
-// Restyled off the old indigo/slate/yellow palette onto the project's
-// actual design tokens.
+// Extracted from what was app/(admin)/admin-dashboard/page.tsx — that
+// route (and its separate passcode gate) is gone now. Per the
+// professor's explicit instruction, there's only ONE /dashboard route;
+// admin content renders inline there like tutor/student, selected by
+// role the same way. A static passcode gate on top of that was extra
+// complexity beyond what was asked, so it's been removed along with
+// the separate route — this component now uses the same LogoutButton
+// as the other two roles instead of the old passcode-specific one.
 
 "use client";
 
@@ -12,7 +15,7 @@ import { useState } from "react";
 import PageHeader from "@/components/layout/PageHeader";
 import StatCard from "@/components/StatCard";
 import DashboardTabs, { type DashboardTab } from "@/components/DashboardTabs";
-import { adminLogout } from "@/app/admin-login/actions";
+import LogoutButton from "@/components/dashboards/LogoutButton";
 
 const initialBookings = [
   { id: "b-1", pair: "Maya Hassan → Ahmad Khalil", detail: "Data Structures · Tomorrow · 4:00 PM" },
@@ -29,7 +32,11 @@ const initialVerifications = [
   { id: "v-1", name: "Ahmad Khalil", detail: "Computer Science Tutor" },
 ];
 
-export default function AdminDashboardPage() {
+type AdminDashboardContentProps = {
+  data?: Record<string, string | number>;
+};
+
+export default function AdminDashboardContent({ data }: AdminDashboardContentProps) {
   const [verifications, setVerifications] = useState(initialVerifications);
   function approveVerification(id: string) {
     setVerifications((prev) => prev.filter((v) => v.id !== id));
@@ -42,10 +49,10 @@ export default function AdminDashboardPage() {
       content: (
         <div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Users" value="248" />
-            <StatCard label="Tutors" value="46" />
+            <StatCard label="Users" value={String(data?.totalUsers ?? "248")} />
+            <StatCard label="Tutors" value={String(data?.totalTutors ?? "46")} />
             <StatCard label="Pending verification" value={String(verifications.length)} />
-            <StatCard label="Bookings" value="132" />
+            <StatCard label="Bookings" value={String(data?.bookingsThisWeek ?? "132")} />
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -181,14 +188,7 @@ export default function AdminDashboardPage() {
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <PageHeader eyebrow="Admin" title="Platform dashboard" />
-        <form action={adminLogout}>
-          <button
-            type="submit"
-            className="rounded-lg border border-border bg-white px-4 py-2 text-sm text-body transition-colors hover:border-forest hover:text-forest"
-          >
-            Log out
-          </button>
-        </form>
+        <LogoutButton />
       </div>
       <DashboardTabs tabs={tabs} />
     </div>

@@ -1,10 +1,8 @@
-// app/(tutor)/dashboard/page.tsx  →  /dashboard
+// components/dashboards/TutorDashboardContent.tsx
 //
-// Consolidates what used to be 8 separate routes (dashboard, /availability,
-// /booking_request, /courses, /history, /profile, /sessions, /subjects)
-// into one page with tabs. Also restyled off the old indigo/slate palette
-// onto the project's actual design tokens — the old pages predated the
-// brand system landing on the rest of the app.
+// Extracted from what was app/(tutor)/dashboard/page.tsx, so the
+// unified app/dashboard/page.tsx can render it for role === "tutor"
+// without duplicating the tab logic. Content/behavior unchanged.
 
 "use client";
 
@@ -13,6 +11,7 @@ import PageHeader from "@/components/layout/PageHeader";
 import PlaceholderBlock from "@/components/layout/PlaceholderBlock";
 import StatCard from "@/components/StatCard";
 import DashboardTabs, { type DashboardTab } from "@/components/DashboardTabs";
+import LogoutButton from "@/components/dashboards/LogoutButton";
 
 const initialBookingRequests = [
   { id: "req-1", student: "Maya Hassan", detail: "Data Structures · Tomorrow 4:00 PM" },
@@ -40,15 +39,17 @@ const availableSubjects = [
   "Web Development",
 ];
 
-export default function TutorDashboardPage() {
-  // Booking requests — accept/decline actually removes them from the list
+type TutorDashboardContentProps = {
+  data?: Record<string, string | number>;
+};
+
+export default function TutorDashboardContent({ data }: TutorDashboardContentProps) {
   const [bookingRequests, setBookingRequests] = useState(initialBookingRequests);
 
   function respondToRequest(id: string) {
     setBookingRequests((prev) => prev.filter((r) => r.id !== id));
   }
 
-  // Availability — toggle days on/off
   const [availableDays, setAvailableDays] = useState<string[]>(weekdays);
   function toggleDay(day: string) {
     setAvailableDays((prev) =>
@@ -56,7 +57,6 @@ export default function TutorDashboardPage() {
     );
   }
 
-  // Subjects — toggle selected
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([
     "Computer Science",
     "Programming",
@@ -67,7 +67,6 @@ export default function TutorDashboardPage() {
     );
   }
 
-  // Profile form
   const [profileName, setProfileName] = useState("");
   const [profileBio, setProfileBio] = useState("");
   const [profileRate, setProfileRate] = useState("");
@@ -82,10 +81,19 @@ export default function TutorDashboardPage() {
       content: (
         <div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Pending requests" value={String(bookingRequests.length)} />
-            <StatCard label="Upcoming sessions" value={String(upcomingSessions.length)} />
-            <StatCard label="This month" value="$240" />
-            <StatCard label="Rating" value="4.9" />
+            <StatCard
+              label="Pending requests"
+              value={String(bookingRequests.length)}
+            />
+            <StatCard
+              label="Upcoming sessions"
+              value={String(data?.upcomingSessions ?? upcomingSessions.length)}
+            />
+            <StatCard
+              label="This month"
+              value={data?.earningsThisMonth ? `$${data.earningsThisMonth}` : "$240"}
+            />
+            <StatCard label="Rating" value={String(data?.rating ?? "4.9")} />
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -305,7 +313,10 @@ export default function TutorDashboardPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Tutor" title="Your dashboard" />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageHeader eyebrow="Tutor" title="Your dashboard" />
+        <LogoutButton />
+      </div>
       <DashboardTabs tabs={tabs} />
     </div>
   );

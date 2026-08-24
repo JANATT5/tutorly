@@ -1,12 +1,12 @@
-// app/(student)/student-dashboard/page.tsx  →  /student-dashboard
+// components/dashboards/StudentDashboardContent.tsx
 //
-// Was an empty (0-byte) file in the original project, which broke the
-// build outright. Now wired to real mock data — studentBookings and
-// tutors from lib/mock-data — instead of a placeholder box.
+// Extracted from what was app/(student)/student-dashboard/page.tsx.
+// Content/behavior unchanged.
 
 import Link from "next/link";
 import PageHeader from "@/components/layout/PageHeader";
-import { studentDashboardStats, studentBookings, tutors, type SubjectKey } from "@/lib/mock-data";
+import LogoutButton from "@/components/dashboards/LogoutButton";
+import { studentBookings, tutors, type SubjectKey } from "@/lib/mock-data";
 
 const subjectLabel: Record<SubjectKey, string> = {
   mathematics: "Mathematics",
@@ -16,16 +16,30 @@ const subjectLabel: Record<SubjectKey, string> = {
   "computer-science": "Computer Science",
 };
 
-export default function StudentDashboardPage() {
+type StudentDashboardContentProps = {
+  data?: Record<string, string | number>;
+};
+
+export default function StudentDashboardContent({ data }: StudentDashboardContentProps) {
+  const stats = [
+    { label: "Upcoming sessions", value: String(data?.upcomingSessions ?? "2") },
+    { label: "Sessions completed", value: String(data?.completedCourses ?? "14") },
+    { label: "Practice avg. score", value: String(data?.practiceAvgScore ?? "76%") },
+    { label: "Planr progress", value: String(data?.planrProgress ?? "30%") },
+  ];
+
   const upcoming = studentBookings.filter((b) => b.status === "upcoming");
   const past = studentBookings.filter((b) => b.status === "completed");
 
   return (
     <div>
-      <PageHeader eyebrow="Student" title="Your dashboard" />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageHeader eyebrow="Student" title="Your dashboard" />
+        <LogoutButton />
+      </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {studentDashboardStats.map((stat) => (
+        {stats.map((stat) => (
           <div key={stat.label} className="rounded-2xl border border-border bg-white p-5 shadow-sm">
             <p className="text-sm text-subtle">{stat.label}</p>
             <p className="mt-2 text-2xl font-bold text-fg">{stat.value}</p>

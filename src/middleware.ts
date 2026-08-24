@@ -1,20 +1,22 @@
 // src/middleware.ts
 //
-// Gates /admin-dashboard behind the passcode set in
-// app/admin-login/actions.ts. This runs server-side before any admin
-// page renders, so it can't be bypassed by just knowing the URL the
-// way a client-side-only check could be.
+// Gates /dashboard behind having ANY valid role cookie (set by
+// LoginForm on successful login — see lib/session.ts). This is a
+// frontend simulation of authentication, per the professor's explicit
+// instruction — not real auth, and deliberately no separate/stronger
+// gate for the admin role specifically (that would be building more
+// than what was asked for). Runs server-side before the page renders,
+// so it can't be bypassed by just knowing the URL.
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-
-const ADMIN_AUTH_COOKIE = "tutorly_admin_auth";
+import { ROLE_COOKIE, parseRoleCookie } from "@/lib/session";
 
 export function middleware(request: NextRequest) {
-  const isAuthed = request.cookies.get(ADMIN_AUTH_COOKIE)?.value === "1";
+  const role = parseRoleCookie(request.cookies.get(ROLE_COOKIE)?.value);
 
-  if (!isAuthed) {
-    const loginUrl = new URL("/admin-login", request.url);
+  if (role === null) {
+    const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("from", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -23,5 +25,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin-dashboard/:path*"],
+  matcher: ["/dashboard/:path*"],
 };

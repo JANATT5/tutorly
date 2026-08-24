@@ -1,6 +1,12 @@
 // app/become-tutor/page.tsx  →  /become-tutor
 //
-// Redesigned 4-step flow:
+// Step 1's form restructured to follow Type → Initial State →
+// Validation → Handling, replacing 11 separate useState calls with one
+// typed form-data object, a dedicated validate function, and real
+// per-field error messages (previously the Continue button was just
+// silently disabled with no explanation of what was missing).
+//
+// 4-step flow:
 //   1. All your info — basic details, what you teach, availability
 //   2. Certificates — AI screens for authenticity
 //   3. Teaching videos (4+) — AI screens for real teaching content
@@ -10,9 +16,8 @@
 // only clears the *AI* gate. Submitting in step 4 always lands on
 // "pending admin review" — never an immediate "approved" — because a
 // human still makes the final call. There's no backend yet (see the
-// TODO in handleSubmit), so "AI analysis" is a simulated delay with a
-// weighted random outcome — see components/become-tutor/CertificateStep
-// and VideoStep for that logic.
+// TODO in handleSubmit), so "AI analysis" is a simulated delay — see
+// components/become-tutor/CertificateStep and VideoStep.
 
 "use client";
 
@@ -41,29 +46,86 @@ function togglePill(list: string[], value: string): string[] {
 const inputClasses =
   "w-full rounded-lg border border-border bg-white px-4 py-3 text-fg placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-forest";
 
+// ---- Type ----
+// Everything Step 1 collects, in one shape — file upload (photo) is
+// kept as separate state below, since a File object isn't really
+// "form data" in the same sense as text/selection fields.
+type BecomeTutorFormData = {
+  fullName: string;
+  email: string;
+  phone: string;
+  hourlyRate: string;
+  bio: string;
+  subjects: string[];
+  specificTopics: string;
+  curricula: string[];
+  languages: string[];
+  days: string[];
+  timesOfDay: string[];
+};
+
+type BecomeTutorFormErrors = Partial<Record<keyof BecomeTutorFormData, string>>;
+
+// ---- Initialization ----
+const initialFormData: BecomeTutorFormData = {
+  fullName: "",
+  email: "",
+  phone: "",
+  hourlyRate: "",
+  bio: "",
+  subjects: [],
+  specificTopics: "",
+  curricula: [],
+  languages: [],
+  days: [],
+  timesOfDay: [],
+};
+
+// ---- Validation ----
+function validateStep1(data: BecomeTutorFormData): BecomeTutorFormErrors {
+  const errors: BecomeTutorFormErrors = {};
+  if (!data.fullName.trim()) errors.fullName = "Full name is required.";
+  if (!data.email.trim()) errors.email = "Email is required.";
+  if (!data.phone.trim()) errors.phone = "Phone number is required.";
+  if (!data.hourlyRate.trim()) errors.hourlyRate = "Hourly rate is required.";
+  if (!data.bio.trim()) errors.bio = "A short bio is required.";
+  if (data.subjects.length === 0) errors.subjects = "Select at least one subject.";
+  if (data.days.length === 0) errors.days = "Select at least one day.";
+  if (data.timesOfDay.length === 0) errors.timesOfDay = "Select at least one time of day.";
+  return errors;
+}
+
 export default function BecomeTutorPage() {
   const [step, setStep] = useState<Step>(1);
 
-  // Step 1 — everything about the applicant
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [hourlyRate, setHourlyRate] = useState("");
-  const [bio, setBio] = useState("");
+  // Step 1 form state
+  const [formData, setFormData] = useState<BecomeTutorFormData>(initialFormData);
+  const [errors, setErrors] = useState<BecomeTutorFormErrors>({});
+
+  // Profile photo — separate from formData since it's a File, not a
+  // plain field value
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-  const [specificTopics, setSpecificTopics] = useState("");
-  const [selectedCurricula, setSelectedCurricula] = useState<string[]>([]);
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [selectedTimesOfDay, setSelectedTimesOfDay] = useState<string[]>([]);
 
   // Step 2 — certificates
   const [certificates, setCertificates] = useState<Certificate[]>([]);
 
   // Step 3 — teaching videos
   const [videos, setVideos] = useState<TeachingVideo[]>([]);
+
+  function handleChange<K extends keyof BecomeTutorFormData>(
+    field: K,
+    value: BecomeTutorFormData[K]
+  ) {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  }
+
+  function handleTogglePill(field: "subjects" | "curricula" | "languages" | "days" | "timesOfDay", value: string) {
+    handleChange(field, togglePill(formData[field], value));
+  }
 
   function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
@@ -78,15 +140,13 @@ export default function BecomeTutorPage() {
     setPhotoPreviewUrl(null);
   }
 
-  const isStep1Valid =
-    fullName.trim().length > 0 &&
-    email.trim().length > 0 &&
-    phone.trim().length > 0 &&
-    hourlyRate.trim().length > 0 &&
-    bio.trim().length > 0 &&
-    selectedSubjects.length > 0 &&
-    selectedDays.length > 0 &&
-    selectedTimesOfDay.length > 0;
+  // ---- Handling ----
+  function handleStep1Continue() {
+    const validationErrors = validateStep1(formData);
+    setErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+    setStep(2);
+  }
 
   const isStep2Valid = isCertificateStepValid(certificates);
   const isStep3Valid = isVideoStepValid(videos);
@@ -96,19 +156,11 @@ export default function BecomeTutorPage() {
     // photoFile, certificates, and videos will need real file storage.
     // Status is always "pending_admin_review" on submit — AI passing
     // steps 2–3 clears the AI gate, but an admin still makes the final
-    // call (see (admin)/admin-dashboard's Verification tab).
+    // call (see components/dashboards/AdminDashboardContent's
+    // Verification tab, rendered at /dashboard for the admin role).
     console.log({
-      fullName,
-      email,
-      phone,
-      hourlyRate,
-      bio,
+      ...formData,
       photoFile,
-      subjects: selectedSubjects,
-      specificTopics,
-      curricula: selectedCurricula,
-      languages: selectedLanguages,
-      availability: { days: selectedDays, timesOfDay: selectedTimesOfDay },
       certificates: certificates.map((c) => ({ name: c.file.name, status: c.status })),
       videos: videos.map((v) => ({
         source: v.source.type === "file" ? v.source.file.name : v.source.url,
@@ -127,15 +179,17 @@ export default function BecomeTutorPage() {
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber/15 text-3xl">
             🕐
           </div>
-          <h2 className="font-display text-2xl text-fg">Almost there, {fullName || "there"}!</h2>
+          <h2 className="font-display text-2xl text-fg">
+            Almost there, {formData.fullName || "there"}!
+          </h2>
           <p className="mt-3 text-body">
             Your certificates and teaching videos passed our AI screening — but that&apos;s only
             the first check. A member of our team now reviews every application by hand before
             it&apos;s approved, so you&apos;re not live on Tutorly just yet.
           </p>
           <p className="mt-3 text-sm text-subtle">
-            We&apos;ll email {email || "you"} once an admin has made a final decision — usually
-            within 2–3 business days.
+            We&apos;ll email {formData.email || "you"} once an admin has made a final decision —
+            usually within 2–3 business days.
           </p>
           <Link
             href="/"
@@ -219,42 +273,42 @@ export default function BecomeTutorPage() {
               </div>
 
               <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <Field label="Full name" required>
+                <Field label="Full name" required error={errors.fullName}>
                   <input
                     type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    value={formData.fullName}
+                    onChange={(e) => handleChange("fullName", e.target.value)}
                     placeholder="Your full name"
                     className={inputClasses}
                   />
                 </Field>
 
-                <Field label="Email" required>
+                <Field label="Email" required error={errors.email}>
                   <input
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={formData.email}
+                    onChange={(e) => handleChange("email", e.target.value)}
                     placeholder="you@example.com"
                     className={inputClasses}
                   />
                 </Field>
 
-                <Field label="Phone" required>
+                <Field label="Phone" required error={errors.phone}>
                   <input
                     type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    value={formData.phone}
+                    onChange={(e) => handleChange("phone", e.target.value)}
                     placeholder="+961 70 000 000"
                     className={inputClasses}
                   />
                 </Field>
 
-                <Field label="Hourly rate (USD)" required>
+                <Field label="Hourly rate (USD)" required error={errors.hourlyRate}>
                   <input
                     type="number"
                     min={0}
-                    value={hourlyRate}
-                    onChange={(e) => setHourlyRate(e.target.value)}
+                    value={formData.hourlyRate}
+                    onChange={(e) => handleChange("hourlyRate", e.target.value)}
                     placeholder="25"
                     className={inputClasses}
                   />
@@ -262,10 +316,10 @@ export default function BecomeTutorPage() {
               </div>
 
               <div className="mt-6">
-                <Field label="Short bio" required>
+                <Field label="Short bio" required error={errors.bio}>
                   <textarea
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
+                    value={formData.bio}
+                    onChange={(e) => handleChange("bio", e.target.value)}
                     placeholder="Tell students about your background, teaching style, and what makes you effective…"
                     rows={4}
                     className={`${inputClasses} resize-none`}
@@ -282,16 +336,19 @@ export default function BecomeTutorPage() {
               </p>
               <PillGroup
                 options={subjects.map((s) => s.label)}
-                selected={selectedSubjects}
-                onToggle={(value) => setSelectedSubjects((prev) => togglePill(prev, value))}
+                selected={formData.subjects}
+                onToggle={(value) => handleTogglePill("subjects", value)}
               />
+              {errors.subjects && (
+                <p className="mt-2 text-xs text-[#B3261E]">{errors.subjects}</p>
+              )}
 
               <div className="mt-6">
                 <Field label="Specific topics">
                   <input
                     type="text"
-                    value={specificTopics}
-                    onChange={(e) => setSpecificTopics(e.target.value)}
+                    value={formData.specificTopics}
+                    onChange={(e) => handleChange("specificTopics", e.target.value)}
                     placeholder="e.g. Mechanics, Organic Chemistry, Python, Calculus…"
                     className={inputClasses}
                   />
@@ -303,8 +360,8 @@ export default function BecomeTutorPage() {
               </p>
               <PillGroup
                 options={[...curricula]}
-                selected={selectedCurricula}
-                onToggle={(value) => setSelectedCurricula((prev) => togglePill(prev, value))}
+                selected={formData.curricula}
+                onToggle={(value) => handleTogglePill("curricula", value)}
               />
 
               <p className="mt-6 font-mono text-xs uppercase tracking-[0.14em] text-subtle">
@@ -312,8 +369,8 @@ export default function BecomeTutorPage() {
               </p>
               <PillGroup
                 options={[...languages]}
-                selected={selectedLanguages}
-                onToggle={(value) => setSelectedLanguages((prev) => togglePill(prev, value))}
+                selected={formData.languages}
+                onToggle={(value) => handleTogglePill("languages", value)}
               />
             </div>
 
@@ -325,25 +382,28 @@ export default function BecomeTutorPage() {
               </p>
               <PillGroup
                 options={[...dayOptions]}
-                selected={selectedDays}
-                onToggle={(value) => setSelectedDays((prev) => togglePill(prev, value))}
+                selected={formData.days}
+                onToggle={(value) => handleTogglePill("days", value)}
               />
+              {errors.days && <p className="mt-2 text-xs text-[#B3261E]">{errors.days}</p>}
 
               <p className="mt-6 font-mono text-xs uppercase tracking-[0.14em] text-subtle">
                 Time of day <span className="text-amber">*</span>
               </p>
               <PillGroup
                 options={[...timeOfDayOptions]}
-                selected={selectedTimesOfDay}
-                onToggle={(value) => setSelectedTimesOfDay((prev) => togglePill(prev, value))}
+                selected={formData.timesOfDay}
+                onToggle={(value) => handleTogglePill("timesOfDay", value)}
               />
+              {errors.timesOfDay && (
+                <p className="mt-2 text-xs text-[#B3261E]">{errors.timesOfDay}</p>
+              )}
             </div>
 
             <button
               type="button"
-              onClick={() => isStep1Valid && setStep(2)}
-              disabled={!isStep1Valid}
-              className="mt-8 w-full rounded-full bg-forest px-7 py-4 text-sm font-semibold text-white transition-colors hover:bg-forest-dark disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={handleStep1Continue}
+              className="mt-8 w-full rounded-full bg-forest px-7 py-4 text-sm font-semibold text-white transition-colors hover:bg-forest-dark"
             >
               Continue: verify your certificates →
             </button>
@@ -388,21 +448,24 @@ export default function BecomeTutorPage() {
               </p>
 
               <ReviewSection title="Basic information">
-                <ReviewRow label="Name" value={fullName} />
-                <ReviewRow label="Email" value={email} />
-                <ReviewRow label="Phone" value={phone} />
-                <ReviewRow label="Rate" value={hourlyRate ? `$${hourlyRate}/hr` : ""} />
+                <ReviewRow label="Name" value={formData.fullName} />
+                <ReviewRow label="Email" value={formData.email} />
+                <ReviewRow label="Phone" value={formData.phone} />
+                <ReviewRow
+                  label="Rate"
+                  value={formData.hourlyRate ? `$${formData.hourlyRate}/hr` : ""}
+                />
               </ReviewSection>
 
               <ReviewSection title="What you teach">
-                <ReviewRow label="Subjects" value={selectedSubjects.join(", ")} />
-                <ReviewRow label="Curricula" value={selectedCurricula.join(", ")} />
-                <ReviewRow label="Languages" value={selectedLanguages.join(", ")} />
+                <ReviewRow label="Subjects" value={formData.subjects.join(", ")} />
+                <ReviewRow label="Curricula" value={formData.curricula.join(", ")} />
+                <ReviewRow label="Languages" value={formData.languages.join(", ")} />
               </ReviewSection>
 
               <ReviewSection title="Availability">
-                <ReviewRow label="Days" value={selectedDays.join(", ")} />
-                <ReviewRow label="Time of day" value={selectedTimesOfDay.join(", ")} />
+                <ReviewRow label="Days" value={formData.days.join(", ")} />
+                <ReviewRow label="Time of day" value={formData.timesOfDay.join(", ")} />
               </ReviewSection>
 
               <ReviewSection title="Certificates">
@@ -441,10 +504,12 @@ export default function BecomeTutorPage() {
 function Field({
   label,
   required = false,
+  error,
   children,
 }: {
   label: string;
   required?: boolean;
+  error?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -454,6 +519,7 @@ function Field({
         {required && <span className="text-amber"> *</span>}
       </span>
       <div className="mt-2">{children}</div>
+      {error && <p className="mt-1 text-xs text-[#B3261E]">{error}</p>}
     </label>
   );
 }
