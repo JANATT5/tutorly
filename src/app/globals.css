@@ -63,6 +63,9 @@
 
   body {
     margin: 0;
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
     background: var(--color-cream);
     color: var(--color-fg);
     font-family: var(--font-sans);

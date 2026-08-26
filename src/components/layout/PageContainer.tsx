@@ -25,10 +25,10 @@ const widthClasses: Record<NonNullable<PageContainerProps["width"]>, string> = {
 
 export default function PageContainer({ children, width = "default" }: PageContainerProps) {
   return (
-    <div className="min-h-screen bg-[#FAF7F2]">
-      <main className={`mx-auto ${widthClasses[width]} px-6 py-12 md:px-8 md:py-16`}>
+    <div className="bg-[#FAF7F2]">
+      <div className={`mx-auto ${widthClasses[width]} px-6 py-12 md:px-8 md:py-16`}>
         {children}
-      </main>
+      </div>
     </div>
   );
 }
