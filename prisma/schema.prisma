@@ -1,0 +1,166 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  TUTOR
+  STUDENT
+}
+
+enum Curriculum {
+  LEBANESE
+  FRENCH
+  AMERICAN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum ApplicationStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+// Base identity for every account. Replaces the static test/1234-style
+// creds in session.ts once real auth is wired in. role drives which
+// dashboard (Admin/Tutor/Student) the client renders.
+model User {
+  id             String          @id @default(cuid())
+  username       String          @unique
+  password       String
+  role           Role
+  createdAt      DateTime        @default(now())
+  studentProfile StudentProfile?
+  tutorProfile   TutorProfile?
+}
+
+// 1:1 extension of User, student-only fields.
+model StudentProfile {
+  id         String      @id @default(cuid())
+  userId     String      @unique
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName   String
+  curriculum Curriculum
+  grade      String
+  bookings   Booking[]
+  planrPaths PlanrPath[]
+}
+
+// 1:1 extension of User, tutor-only fields.
+model TutorProfile {
+  id          String            @id @default(cuid())
+  userId      String            @unique
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName    String
+  bio         String
+  curriculum  Curriculum
+  hourlyRate  Float
+  verified    Boolean           @default(false)
+  rating      Float?
+  subjects    TutorSubject[]
+  bookings    Booking[]
+  reviews     Review[]
+  application TutorApplication?
+}
+
+// Standalone subject list, reused across tutors and practice questions.
+model Subject {
+  id                String             @id @default(cuid())
+  name              String             @unique
+  tutors            TutorSubject[]
+  practiceQuestions PracticeQuestion[]
+}
+
+// Join table for tutor↔subject many-to-many. Composite PK.
+model TutorSubject {
+  tutorId   String
+  subjectId String
+  tutor     TutorProfile @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  subject   Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@id([tutorId, subjectId])
+}
+
+// Core Browse → Tutor Detail → Booking → Confirmation flow.
+model Booking {
+  id        String         @id @default(cuid())
+  studentId String
+  tutorId   String
+  subject   String
+  status    BookingStatus  @default(PENDING)
+  date      DateTime
+  createdAt DateTime       @default(now())
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  tutor     TutorProfile   @relation(fields: [tutorId], references: [id], onDelete: Restrict)
+}
+
+// Post-session rating/comment left for a tutor.
+model Review {
+  id        String       @id @default(cuid())
+  tutorId   String
+  rating    Int
+  comment   String?
+  createdAt DateTime     @default(now())
+  tutor     TutorProfile @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+}
+
+// Tracks the 4-step become-a-tutor wizard + admin verification pipeline.
+model TutorApplication {
+  id          String            @id @default(cuid())
+  tutorId     String            @unique
+  status      ApplicationStatus @default(PENDING)
+  documents   String[]
+  aiScore     Float?
+  submittedAt DateTime          @default(now())
+  reviewedAt  DateTime?
+  tutor       TutorProfile      @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+}
+
+// The 105-question practice bank, linked to a Subject.
+model PracticeQuestion {
+  id            String   @id @default(cuid())
+  subjectId     String
+  question      String
+  options       String[]
+  correctAnswer String
+  difficulty    String
+  subject       Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+}
+
+// Career Quiz question bank.
+model QuizQuestion {
+  id      String   @id @default(cuid())
+  prompt  String
+  options String[]
+}
+
+// One row per completed quiz attempt.
+model QuizResult {
+  id          String   @id @default(cuid())
+  studentId   String
+  resultLabel String
+  answers     Json
+  createdAt   DateTime @default(now())
+}
+
+// Planr's AI-generated learning path per student.
+model PlanrPath {
+  id        String         @id @default(cuid())
+  studentId String
+  goal      String
+  steps     Json
+  createdAt DateTime       @default(now())
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
