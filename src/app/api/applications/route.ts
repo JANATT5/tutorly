@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   const status = request.nextUrl.searchParams.get('status');
 
   const applications = await prisma.tutorApplication.findMany({
-    where: status ? { status: status as any } : undefined,
+    where: status ? { status } : undefined,
     include: { tutor: true },
     orderBy: { submittedAt: 'desc' },
   });
