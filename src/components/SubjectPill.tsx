@@ -5,8 +5,8 @@ type SubjectPillProps = {
 
 export default function SubjectPill({ icon, label }: SubjectPillProps) {
   return (
-    <button className="bg-white border border-gray-200 rounded-full px-5 py-3 flex items-center gap-2 text-[#1B3B2F] font-medium hover:shadow-md transition-shadow">
-      <span>{icon}</span>
+    <button className="flex items-center gap-2 rounded-full border border-border bg-white px-5 py-3 font-medium text-forest transition-shadow hover:shadow-md">
+      <span aria-hidden="true">{icon}</span>
       {label}
     </button>
   );
