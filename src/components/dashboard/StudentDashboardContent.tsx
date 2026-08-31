@@ -5,7 +5,7 @@
 
 import Link from "next/link";
 import PageHeader from "@/components/layout/PageHeader";
-import LogoutButton from "@/components/dashboards/LogoutButton";
+import LogoutButton from "@/components/dashboard/LogoutButton";
 import { studentBookings, tutors, type SubjectKey } from "@/lib/mock-data";
 
 const subjectLabel: Record<SubjectKey, string> = {
