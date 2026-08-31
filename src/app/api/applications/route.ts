@@ -1,18 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { z } from 'zod';
 
-// Defines exactly what a valid POST body must look like
-const createApplicationSchema = z.object({
-  tutorId: z.string().min(1, 'tutorId is required'),
-  documents: z.array(z.string()).optional().default([]),
-  aiScore: z.number().min(0).max(100).optional().nullable(),
-});
+// GET /api/applications — admin dashboard: list applications, optionally by status
+export async function GET(request: NextRequest) {
+  const status = request.nextUrl.searchParams.get('status');
 
+  const applications = await prisma.tutorApplication.findMany({
+    where: status ? { status } : undefined,
+    include: { tutor: true },
+    orderBy: { submittedAt: 'desc' },
+  });
+
+  return NextResponse.json(applications);
+}
+
+// POST /api/applications — submit a become-a-tutor application
 export async function POST(request: NextRequest) {
   const body = await request.json();
 
   // Validate before touching the database
+  const parsed = createApplicationSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid request', details: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+
+<<<<<<< HEAD
   const parsed = createApplicationSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -27,6 +43,12 @@ export async function POST(request: NextRequest) {
       tutorId: parsed.data.tutorId,
       documents: parsed.data.documents,
       aiScore: parsed.data.aiScore ?? null,
+=======
+  const application = await prisma.tutorApplication.create({
+    data: {
+      tutorId: body.tutorId,
+      documents: body.documents ?? [],
+      aiScore: body.aiScore ?? null,
     },
   });
 
