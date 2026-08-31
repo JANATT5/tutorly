@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+<<<<<<< HEAD
 import { z } from 'zod';
 
 // Validates optional ?status= query param
@@ -27,6 +28,15 @@ export async function GET(request: NextRequest) {
 
   const applications = await prisma.tutorApplication.findMany({
     where: parsedStatus.data ? { status: parsedStatus.data } : undefined,
+=======
+
+// GET /api/applications — admin dashboard: list applications, optionally by status
+export async function GET(request: NextRequest) {
+  const status = request.nextUrl.searchParams.get('status');
+
+  const applications = await prisma.tutorApplication.findMany({
+    where: status ? { status } : undefined,
+>>>>>>> b1b41cb3b2ace41a91f82f8bdaf7d90327af0e2e
     include: { tutor: true },
     orderBy: { submittedAt: 'desc' },
   });
@@ -38,6 +48,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const body = await request.json();
 
+<<<<<<< HEAD
   const parsed = createApplicationSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -52,6 +63,13 @@ export async function POST(request: NextRequest) {
       tutorId: parsed.data.tutorId,
       documents: parsed.data.documents,
       aiScore: parsed.data.aiScore ?? null,
+=======
+  const application = await prisma.tutorApplication.create({
+    data: {
+      tutorId: body.tutorId,
+      documents: body.documents ?? [],
+      aiScore: body.aiScore ?? null,
+>>>>>>> b1b41cb3b2ace41a91f82f8bdaf7d90327af0e2e
     },
   });
 
