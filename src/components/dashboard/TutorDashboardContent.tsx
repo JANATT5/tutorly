@@ -11,7 +11,7 @@ import PageHeader from "@/components/layout/PageHeader";
 import PlaceholderBlock from "@/components/layout/PlaceholderBlock";
 import StatCard from "@/components/StatCard";
 import DashboardTabs, { type DashboardTab } from "@/components/DashboardTabs";
-import LogoutButton from "@/components/dashboards/LogoutButton";
+import LogoutButton from "@/components/dashboard/LogoutButton";
 
 const initialBookingRequests = [
   { id: "req-1", student: "Maya Hassan", detail: "Data Structures · Tomorrow 4:00 PM" },
