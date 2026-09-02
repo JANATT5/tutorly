@@ -4,14 +4,22 @@
 // QuizResults as one local step-state flow rather than separate routes
 // (matches the "Nav Data Gotcha" doc — quiz-intro/questions/results
 // share `current` + `answers` local state, not URL params).
+//
+// The question bank and tag-based path-matching logic stay client-side —
+// the real QuizQuestion model is just { prompt, options: string[] }, with
+// no field for the tags this scoring needs, so there's nothing to wire
+// those parts to. What IS real: once a logged-in student finishes, their
+// result is saved via POST /api/quiz-results (see useCreateQuizResult).
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   careerQuizQuestions,
   careerPaths,
 } from "@/lib/mock-data";
+import { useCreateQuizResult } from "@/hooks/useQuizResults";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 type Step = "intro" | "questions" | "results";
 
@@ -53,6 +61,23 @@ export default function QuizPage() {
     return combined;
   }, [topPaths]);
 
+  const { studentProfile } = useCurrentUser();
+  const createQuizResult = useCreateQuizResult();
+  // A ref, not state — flipping it doesn't need to trigger a re-render, it
+  // just needs to survive across renders so this effect fires exactly once
+  // per finished attempt instead of on every render where step === "results".
+  const resultSavedRef = useRef(false);
+
+  useEffect(() => {
+    if (step !== "results" || resultSavedRef.current || !studentProfile) return;
+    resultSavedRef.current = true;
+    createQuizResult.mutate({
+      studentId: studentProfile.id,
+      resultLabel: topPaths[0]?.title ?? "Explorer",
+      answers,
+    });
+  }, [step, studentProfile, topPaths, answers, createQuizResult]);
+
   function selectOption(tags: string[]) {
     const next = [...answers];
     next[current] = tags;
@@ -69,6 +94,7 @@ export default function QuizPage() {
     setStep("intro");
     setCurrent(0);
     setAnswers([]);
+    resultSavedRef.current = false;
   }
 
   // -------------------------------------------------------------
@@ -175,6 +201,19 @@ export default function QuizPage() {
       <h1 className="mb-4 font-display text-3xl text-fg md:text-4xl">
         {topPaths.length > 1 ? "A few directions worth exploring" : topPaths[0]?.title}
       </h1>
+
+      {studentProfile ? (
+        <p className="mb-6 text-xs text-forest">
+          {createQuizResult.isSuccess ? "Saved to your account." : ""}
+        </p>
+      ) : (
+        <p className="mb-6 text-xs text-subtle">
+          <Link href="/login" className="underline underline-offset-2">
+            Log in
+          </Link>{" "}
+          to save this result to your account.
+        </p>
+      )}
 
       <div className="mb-8 grid grid-cols-1 gap-4 text-left sm:grid-cols-2">
         {topPaths.map((path) => (

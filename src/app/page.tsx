@@ -1,9 +1,18 @@
 // app/page.tsx  →  /
+//
+// Server component — fetches through the same axiosGet + IResponse
+// convention as the tutor detail page (see src/lib/axios.ts), not a
+// react-query hook, since hooks only work in Client Components and this
+// is the highest-traffic page in the app (worth keeping server-rendered).
+// Wrapped in try/catch: a database hiccup shouldn't 500 the homepage —
+// it just renders with fewer featured tutors/subjects that request.
 
 import Link from "next/link";
 import SubjectPill from "@/components/SubjectPill";
 import FeaturedTutorCard from "@/components/tutors/FeaturedTutorCard";
-import { subjects, featuredTutors } from "@/lib/mock-data";
+import { axiosGet } from "@/lib/axios";
+import type { Tutor } from "@/hooks/useTutors";
+import type { Subject } from "@/hooks/useSubjects";
 
 const steps = [
   {
@@ -23,7 +32,27 @@ const steps = [
   },
 ];
 
-export default function HomePage() {
+async function getHomeData() {
+  try {
+    const [tutorsRes, subjectsRes] = await Promise.all([
+      axiosGet<Tutor[]>("tutors"),
+      axiosGet<Subject[]>("subjects"),
+    ]);
+    return { tutors: tutorsRes.data ?? [], subjects: subjectsRes.data ?? [] };
+  } catch {
+    return { tutors: [], subjects: [] };
+  }
+}
+
+export default async function HomePage() {
+  const { tutors, subjects } = await getHomeData();
+
+  // Verified tutors first — "featured" means "we'd vouch for them," not a
+  // join-date claim the schema can't back (TutorProfile has no createdAt).
+  const featuredTutors = [...tutors]
+    .sort((a, b) => Number(b.verified) - Number(a.verified))
+    .slice(0, 3);
+
   return (
     <div className="bg-cream">
       {/* Hero + Planr card */}
@@ -51,8 +80,8 @@ export default function HomePage() {
               </p>
               <div className="flex flex-wrap gap-3">
                 {subjects.map((subject) => (
-                  <Link key={subject.key} href={`/browse?subject=${subject.key}`}>
-                    <SubjectPill icon={subject.icon} label={subject.label} />
+                  <Link key={subject.id} href="/browse">
+                    <SubjectPill icon="📘" label={subject.name} />
                   </Link>
                 ))}
               </div>
@@ -179,30 +208,32 @@ export default function HomePage() {
       </section>
 
       {/* Featured tutors */}
-      <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-8">
-        <div className="flex items-end justify-between">
-          <div>
-            <p className="font-mono text-xs uppercase tracking-[0.14em] text-[#7C9473]">
-              Featured tutors
-            </p>
-            <h2 className="mt-2 font-display text-3xl text-forest md:text-4xl">
-              Recently joined
-            </h2>
+      {featuredTutors.length > 0 && (
+        <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-8">
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-[0.14em] text-[#7C9473]">
+                Featured tutors
+              </p>
+              <h2 className="mt-2 font-display text-3xl text-forest md:text-4xl">
+                Meet a few of our tutors
+              </h2>
+            </div>
+            <Link
+              href="/browse"
+              className="text-sm font-medium text-body underline underline-offset-4 hover:text-forest"
+            >
+              See all →
+            </Link>
           </div>
-          <Link
-            href="/browse"
-            className="text-sm font-medium text-body underline underline-offset-4 hover:text-forest"
-          >
-            See all →
-          </Link>
-        </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3">
-          {featuredTutors.map((tutor) => (
-            <FeaturedTutorCard key={tutor.id} tutor={tutor} />
-          ))}
-        </div>
-      </section>
+          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3">
+            {featuredTutors.map((tutor) => (
+              <FeaturedTutorCard key={tutor.id} tutor={tutor} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Career quiz CTA */}
       <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-8">

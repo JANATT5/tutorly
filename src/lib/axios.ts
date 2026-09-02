@@ -112,6 +112,19 @@ export const axiosPut = async <TRequest, TResponse>(
   return unwrap(response?.data as IResponse<TResponse>)
 }
 
+export const axiosPatch = async <TRequest, TResponse>(
+  path: string,
+  dto?: TRequest,
+): Promise<IResponse<TResponse>> => {
+  let response
+  try {
+    response = await api.patch(path, dto)
+  } catch (error) {
+    throw toApiError(error, 'An unknown error occurred while updating data')
+  }
+  return unwrap(response?.data as IResponse<TResponse>)
+}
+
 export const axiosDelete = async <T>(path: string): Promise<IResponse<T>> => {
   let response
   try {

@@ -69,6 +69,14 @@ model TutorProfile {
   hourlyRate  Float
   verified    Boolean           @default(false)
   rating      Float?
+  // Profile photo URL. Nullable — a tutor without one falls back to a
+  // placeholder image on the frontend.
+  avatar      String?
+  // e.g. ["English", "Arabic"]. No relation to a fixed enum on purpose —
+  // this is free text the tutor enters, unlike `curriculum`.
+  languages   String[]          @default([])
+  location    String?
+  experienceYears Int?
   subjects    TutorSubject[]
   bookings    Booking[]
   reviews     Review[]
