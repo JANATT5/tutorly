@@ -1,41 +1,39 @@
 // app/tutors/[tutorId]/book/confirmation/page.tsx  →  /tutors/123/book/confirmation
 //
-// Final step of the booking flow, worth its own URL because a user
-// might screenshot, refresh, or come back to this exact screen —
-// unlike a modal or toast, which disappears. Since there's no backend
-// yet, the chosen subject/day/time travel here as query params from
-// BookingForm rather than being looked up from a stored booking —
-// enough to show a real summary without pretending there's a database.
+// Final step of the booking flow, worth its own URL because a user might
+// screenshot, refresh, or come back to this exact screen — unlike a modal
+// or toast, which disappears. Now that bookings are real rows, this page
+// looks the booking up by the id BookingForm got back from
+// POST /api/bookings, instead of trusting subject/day/time as query
+// params — the same "fetch by id, 404 if missing" pattern as
+// ../../page.tsx (tutor detail) and this route's own page.tsx.
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
-import { tutors, type SubjectKey } from "@/lib/mock-data";
+import { axiosGet, ApiError } from "@/lib/axios";
+import type { Booking } from "@/hooks/useBookings";
 
-const subjectLabel: Record<SubjectKey, string> = {
-  mathematics: "Mathematics",
-  physics: "Physics",
-  chemistry: "Chemistry",
-  biology: "Biology",
-  "computer-science": "Computer Science",
-};
+const fallbackAvatar =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Crect width='48' height='48' fill='%23e5e7eb'/%3E%3C/svg%3E";
 
 type ConfirmationPageProps = {
-  params: Promise<{ tutorId: string }>;
-  searchParams: Promise<{ bookingId?: string; subject?: string; day?: string; time?: string }>;
+  searchParams: Promise<{ bookingId?: string }>;
 };
 
-export default async function BookingConfirmationPage({
-  params,
-  searchParams,
-}: ConfirmationPageProps) {
-  const { tutorId } = await params;
-  const { bookingId, subject, day, time } = await searchParams;
+export default async function BookingConfirmationPage({ searchParams }: ConfirmationPageProps) {
+  const { bookingId } = await searchParams;
+  if (!bookingId) notFound();
 
-  const tutor = tutors.find((t) => t.id === tutorId);
-  if (!tutor) notFound();
-
-  const subjectKey = subject as SubjectKey | undefined;
+  let booking: Booking;
+  try {
+    const response = await axiosGet<Booking>(`bookings/${bookingId}`);
+    if (!response.data) notFound();
+    booking = response.data;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) notFound();
+    throw error;
+  }
 
   return (
     <PageContainer width="narrow">
@@ -47,8 +45,8 @@ export default async function BookingConfirmationPage({
           Your session request is on its way
         </h1>
         <p className="mx-auto max-w-sm text-sm leading-relaxed text-subtle">
-          {tutor.name} will reach out to confirm the time.
-          {bookingId && <> Booking reference: {bookingId}.</>}
+          {booking.tutor.fullName} will reach out to confirm the time. Booking reference:{" "}
+          {booking.id}.
         </p>
       </div>
 
@@ -57,30 +55,36 @@ export default async function BookingConfirmationPage({
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={tutor.avatar}
-            alt={tutor.name}
+            src={booking.tutor.avatar ?? fallbackAvatar}
+            alt={booking.tutor.fullName}
             className="h-12 w-12 rounded-xl object-cover"
           />
           <div>
-            <p className="font-display text-base text-fg">{tutor.name}</p>
-            <p className="text-xs text-subtle">${tutor.pricePerHour}/hr</p>
+            <p className="font-display text-base text-fg">{booking.tutor.fullName}</p>
+            <p className="text-xs text-subtle">${booking.tutor.hourlyRate}/hr</p>
           </div>
         </div>
 
         <div className="mt-4 space-y-1.5 border-t border-border pt-4 text-sm">
           <div className="flex justify-between">
             <span className="text-subtle">Subject</span>
+            <span className="font-medium text-fg">{booking.subject}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-subtle">Date</span>
             <span className="font-medium text-fg">
-              {subjectKey ? subjectLabel[subjectKey] : "—"}
+              {new Date(booking.date).toLocaleString(undefined, {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-subtle">Day</span>
-            <span className="font-medium text-fg">{day ?? "—"}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-subtle">Time</span>
-            <span className="font-medium text-fg">{time ?? "—"}</span>
+            <span className="text-subtle">Status</span>
+            <span className="font-medium text-fg">{booking.status}</span>
           </div>
         </div>
       </div>

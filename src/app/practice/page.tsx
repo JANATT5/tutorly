@@ -1,38 +1,47 @@
 // app/practice/page.tsx  →  /practice
 //
-// Banner pattern (matches Browse / Become-a-tutor). Previously "Start
-// test" had no onClick handler at all — it rendered as a button but
-// did nothing, because only the setup screen (subject/level pickers +
-// summary) was ever built. This adds the actual test-taking flow:
-// setup → test (one question at a time) → results (score + review).
-// Same local step-state pattern as the Career Quiz, since nothing here
-// needs its own URL.
+// Wired to the real /api/practice-questions endpoint. Two shape changes
+// from the old mock-data version, both driven by the real PracticeQuestion
+// model (prisma/schema.prisma):
+//   - "level" (a grade, e.g. "Grade 12 (Lebanese Bac)") doesn't exist on
+//     the real model — it has `difficulty` (free text, e.g. "Easy") instead.
+//     The level picker became a difficulty picker.
+//   - `correctAnswer` is stored as the answer TEXT, not an option index —
+//     so answers are compared as strings here instead of by index.
+// The question bank itself is small and real (seeded by
+// prisma/seed-practice-questions.mjs) rather than the old mock's ~105
+// illustrative ones — see that file's own comment for why.
 
 "use client";
 
 import { useMemo, useState } from "react";
 import PageHero from "@/components/layout/PageHero";
-import { subjects, levels, practiceQuestions, type SubjectKey } from "@/lib/mock-data";
+import { useSubjects } from "@/hooks/useSubjects";
+import { usePracticeQuestions } from "@/hooks/usePracticeQuestions";
 
-type Level = (typeof levels)[number];
+const difficulties = ["Easy", "Medium", "Hard"] as const;
+type Difficulty = (typeof difficulties)[number];
 type Mode = "setup" | "test" | "results";
 
 export default function PracticePage() {
+  const { data: subjects = [] } = useSubjects();
   const [mode, setMode] = useState<Mode>("setup");
-  const [subjectKey, setSubjectKey] = useState<SubjectKey>("physics");
-  const [level, setLevel] = useState<Level>("Grade 12 (Lebanese Bac)");
+  const [subjectId, setSubjectId] = useState<string>("");
+  const [difficulty, setDifficulty] = useState<Difficulty>("Easy");
+
+  // Default to the first loaded subject once subjects arrive.
+  const activeSubjectId = subjectId || subjects[0]?.id || "";
+  const subject = subjects.find((s) => s.id === activeSubjectId);
+
+  const { data: matchingQuestions = [], isLoading } = usePracticeQuestions(
+    { subjectId: activeSubjectId, difficulty },
+    { enabled: Boolean(activeSubjectId) },
+  );
 
   // Test-taking state
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<(number | null)[]>([]);
-  const [selectedThisQuestion, setSelectedThisQuestion] = useState<number | null>(null);
-
-  const subject = subjects.find((s) => s.key === subjectKey)!;
-
-  const matchingQuestions = useMemo(
-    () => practiceQuestions.filter((q) => q.subject === subjectKey && q.level === level),
-    [subjectKey, level]
-  );
+  const [selectedAnswers, setSelectedAnswers] = useState<(string | null)[]>([]);
+  const [selectedThisQuestion, setSelectedThisQuestion] = useState<string | null>(null);
 
   const questionCount = matchingQuestions.length;
   const hasQuestions = questionCount > 0;
@@ -45,8 +54,8 @@ export default function PracticePage() {
     setMode("test");
   }
 
-  function handleSelectOption(optionIndex: number) {
-    setSelectedThisQuestion(optionIndex);
+  function handleSelectOption(option: string) {
+    setSelectedThisQuestion(option);
   }
 
   function handleNextQuestion() {
@@ -68,7 +77,7 @@ export default function PracticePage() {
 
   const score = useMemo(() => {
     return selectedAnswers.reduce<number>((total, answer, index) => {
-      return answer === matchingQuestions[index]?.correctIndex ? total + 1 : total;
+      return answer === matchingQuestions[index]?.correctAnswer ? total + 1 : total;
     }, 0);
   }, [selectedAnswers, matchingQuestions]);
 
@@ -81,7 +90,7 @@ export default function PracticePage() {
     return (
       <>
         <PageHero
-          eyebrow={`Practice · ${subject.label}`}
+          eyebrow={`Practice · ${subject?.name ?? ""}`}
           title={`Question ${currentIndex + 1} of ${matchingQuestions.length}`}
         />
 
@@ -96,17 +105,17 @@ export default function PracticePage() {
           </div>
 
           <p className="mt-8 whitespace-pre-line font-display text-xl text-fg">
-            {question.prompt}
+            {question.question}
           </p>
 
           <div className="mt-6 space-y-3">
-            {question.options.map((option, index) => {
-              const isSelected = selectedThisQuestion === index;
+            {question.options.map((option) => {
+              const isSelected = selectedThisQuestion === option;
               return (
                 <button
-                  key={index}
+                  key={option}
                   type="button"
-                  onClick={() => handleSelectOption(index)}
+                  onClick={() => handleSelectOption(option)}
                   aria-pressed={isSelected}
                   className={`block w-full rounded-xl border p-4 text-left text-sm transition-colors ${
                     isSelected
@@ -145,12 +154,12 @@ export default function PracticePage() {
           <div className="space-y-4">
             {matchingQuestions.map((question, index) => {
               const userAnswer = selectedAnswers[index];
-              const isCorrect = userAnswer === question.correctIndex;
+              const isCorrect = userAnswer === question.correctAnswer;
               return (
                 <div key={question.id} className="rounded-xl border border-border bg-white p-5">
                   <div className="flex items-start justify-between gap-3">
                     <p className="whitespace-pre-line text-sm font-medium text-fg">
-                      {question.prompt}
+                      {question.question}
                     </p>
                     <span
                       className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
@@ -161,12 +170,10 @@ export default function PracticePage() {
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-subtle">
-                    Correct answer: {question.options[question.correctIndex]}
+                    Correct answer: {question.correctAnswer}
                   </p>
                   {!isCorrect && userAnswer !== null && (
-                    <p className="mt-1 text-sm text-[#B3261E]">
-                      Your answer: {question.options[userAnswer]}
-                    </p>
+                    <p className="mt-1 text-sm text-[#B3261E]">Your answer: {userAnswer}</p>
                   )}
                 </div>
               );
@@ -205,38 +212,38 @@ export default function PracticePage() {
         {/* Subject cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {subjects.map((s) => {
-            const isActive = s.key === subjectKey;
+            const isActive = s.id === activeSubjectId;
             return (
               <button
-                key={s.key}
+                key={s.id}
                 type="button"
-                onClick={() => setSubjectKey(s.key)}
+                onClick={() => setSubjectId(s.id)}
                 aria-pressed={isActive}
                 className={`rounded-xl border bg-white p-6 text-left transition-colors ${
                   isActive ? "border-forest ring-1 ring-forest" : "border-border hover:border-forest"
                 }`}
               >
                 <span className="text-2xl" aria-hidden="true">
-                  {s.icon}
+                  📘
                 </span>
-                <p className="mt-3 font-display text-lg font-semibold text-fg">{s.label}</p>
+                <p className="mt-3 font-display text-lg font-semibold text-fg">{s.name}</p>
               </button>
             );
           })}
         </div>
 
-        {/* Level selector */}
+        {/* Difficulty selector */}
         <p className="mb-3 mt-10 font-mono text-xs uppercase tracking-[0.14em] text-subtle">
-          Your level
+          Difficulty
         </p>
         <div className="flex flex-wrap gap-3">
-          {levels.map((l) => {
-            const isActive = l === level;
+          {difficulties.map((d) => {
+            const isActive = d === difficulty;
             return (
               <button
-                key={l}
+                key={d}
                 type="button"
-                onClick={() => setLevel(l)}
+                onClick={() => setDifficulty(d)}
                 aria-pressed={isActive}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                   isActive
@@ -244,7 +251,7 @@ export default function PracticePage() {
                     : "border border-border bg-white text-fg hover:border-forest"
                 }`}
               >
-                {l}
+                {d}
               </button>
             );
           })}
@@ -254,7 +261,9 @@ export default function PracticePage() {
         <div className="mt-10 grid grid-cols-2 gap-6 rounded-xl border border-border bg-white p-6 sm:grid-cols-4">
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.14em] text-subtle">Questions</p>
-            <p className="mt-1 font-display text-lg font-semibold text-fg">{questionCount}</p>
+            <p className="mt-1 font-display text-lg font-semibold text-fg">
+              {isLoading ? "…" : questionCount}
+            </p>
           </div>
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.14em] text-subtle">Format</p>
@@ -262,11 +271,11 @@ export default function PracticePage() {
           </div>
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.14em] text-subtle">Subject</p>
-            <p className="mt-1 font-display text-lg font-semibold text-fg">{subject.label}</p>
+            <p className="mt-1 font-display text-lg font-semibold text-fg">{subject?.name ?? "—"}</p>
           </div>
           <div>
-            <p className="font-mono text-xs uppercase tracking-[0.14em] text-subtle">Report</p>
-            <p className="mt-1 font-display text-lg font-semibold text-fg">Personalised</p>
+            <p className="font-mono text-xs uppercase tracking-[0.14em] text-subtle">Difficulty</p>
+            <p className="mt-1 font-display text-lg font-semibold text-fg">{difficulty}</p>
           </div>
         </div>
 
@@ -279,8 +288,8 @@ export default function PracticePage() {
             <p className="mt-1 flex items-center gap-2 text-sm text-white/70">
               <span aria-hidden="true">⚡</span>
               {hasQuestions
-                ? `${questionCount} ${subject.label} question${questionCount === 1 ? "" : "s"} · No time limit`
-                : "Try a different subject or level, or check back soon."}
+                ? `${questionCount} question${questionCount === 1 ? "" : "s"} · No time limit`
+                : "Try a different subject or difficulty, or check back soon."}
             </p>
           </div>
           <button

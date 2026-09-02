@@ -1,37 +1,50 @@
+import { NextRequest } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { ok, created, fail, handlePrismaError } from '@/lib/apiResponse'
+import { createTutorSchema } from './schema'
+import { tutorInclude, withSessionsCount } from './helpers'
 
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-
-// GET /api/tutors — list tutors, optionally filtered by subject
+// GET /api/tutors — list tutors, optionally filtered by ?subject=<name>
+// and/or ?userId=<id> (the latter used to look up "the current tutor's
+// profile" from their User id — see src/hooks/useCurrentUser.ts)
+// e.g. GET /api/tutors?subject=Math
 export async function GET(request: NextRequest) {
-  const subject = request.nextUrl.searchParams.get('subject');
+  const subject = request.nextUrl.searchParams.get('subject')
+  const userId = request.nextUrl.searchParams.get('userId')
 
   const tutors = await prisma.tutorProfile.findMany({
-    where: subject
-      ? { subjects: { some: { subject: { name: subject } } } }
-      : undefined,
-    include: {
-      subjects: { include: { subject: true } },
-      reviews: true,
+    where: {
+      ...(subject ? { subjects: { some: { subject: { name: subject } } } } : {}),
+      ...(userId ? { userId } : {}),
     },
-  });
+    include: tutorInclude,
+  })
 
-  return NextResponse.json(tutors);
+  return ok(tutors.map(withSessionsCount))
 }
 
-// POST /api/tutors — create a tutor profile (used after signup/onboarding)
+// POST /api/tutors — create a tutor profile (used once after a TUTOR user
+// finishes onboarding / their application is approved)
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  const body = await request.json()
 
-  const tutor = await prisma.tutorProfile.create({
-    data: {
-      userId: body.userId,
-      fullName: body.fullName,
-      bio: body.bio,
-      curriculum: body.curriculum,
-      hourlyRate: body.hourlyRate,
-    },
-  });
+  // Validate before touching the database — see createTutorSchema in
+  // ./schema.ts for exactly what's required.
+  const parsed = createTutorSchema.safeParse(body)
 
-  return NextResponse.json(tutor, { status: 201 });
+  if (!parsed.success) {
+    return fail(400, 'Invalid request', parsed.error.flatten())
+  }
+
+  try {
+    const tutor = await prisma.tutorProfile.create({
+      data: parsed.data,
+      include: tutorInclude,
+    })
+    return created(withSessionsCount(tutor))
+  } catch (error) {
+    // Most likely cause here: userId isn't unique (this user already has a
+    // tutor profile) — handlePrismaError turns that into a clean 409.
+    return handlePrismaError(error)
+  }
 }

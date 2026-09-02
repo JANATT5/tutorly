@@ -1,31 +1,23 @@
 // components/tutors/TutorProfileTabs.tsx
 //
 // The Info/Subjects/Bio/Availability tabs on a tutor's profile page.
-// Previously these were just static <span> labels with no click
-// handlers or state — clicking "Availability" did nothing, and the
-// content underneath was a permanent PlaceholderBlock regardless of
-// which tab was "selected". This wires them to real local tab state
-// (same pattern as DashboardTabs) and renders the tutorTopics /
-// tutorAvailability data that already existed in lib/mock-data but
-// was never actually used anywhere.
 
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import type { Tutor } from "@/lib/mock-data";
+import type { Tutor } from "@/hooks/useTutors";
+import { curriculumLabel } from "./TutorCard";
 
 type TutorProfileTabsProps = {
   tutor: Tutor;
-  topics: string[];
-  availability: string[];
 };
 
 const tabs = ["Info", "Subjects", "Bio", "Availability"] as const;
 type Tab = (typeof tabs)[number];
 
-export default function TutorProfileTabs({ tutor, topics, availability }: TutorProfileTabsProps) {
+export default function TutorProfileTabs({ tutor }: TutorProfileTabsProps) {
   const [activeTab, setActiveTab] = useState<Tab>("Info");
+  const subjectNames = tutor.subjects.map((ts) => ts.subject.name);
 
   return (
     <div>
@@ -50,25 +42,31 @@ export default function TutorProfileTabs({ tutor, topics, availability }: TutorP
       <div className="mt-6 rounded-xl border border-border bg-white p-6">
         {activeTab === "Info" && (
           <div className="space-y-1.5 text-sm">
-            <Row label="Location" value={tutor.location} />
-            <Row label="Curriculum" value={tutor.curriculum} />
-            <Row label="Languages" value={tutor.languages.join(", ")} />
-            <Row label="Experience" value={`${tutor.experienceYears} years`} />
+            <Row label="Location" value={tutor.location ?? "Not specified"} />
+            <Row label="Curriculum" value={curriculumLabel[tutor.curriculum]} />
+            <Row
+              label="Languages"
+              value={tutor.languages.length > 0 ? tutor.languages.join(", ") : "Not specified"}
+            />
+            <Row
+              label="Experience"
+              value={tutor.experienceYears != null ? `${tutor.experienceYears} years` : "Not specified"}
+            />
           </div>
         )}
 
         {activeTab === "Subjects" && (
           <div>
-            {topics.length === 0 ? (
-              <p className="text-sm text-subtle">No specific topics listed yet.</p>
+            {subjectNames.length === 0 ? (
+              <p className="text-sm text-subtle">No subjects listed yet.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {topics.map((topic) => (
+                {subjectNames.map((name) => (
                   <span
-                    key={topic}
+                    key={name}
                     className="rounded-full bg-secondary px-3 py-1.5 text-sm font-medium text-forest"
                   >
-                    {topic}
+                    {name}
                   </span>
                 ))}
               </div>
@@ -81,31 +79,14 @@ export default function TutorProfileTabs({ tutor, topics, availability }: TutorP
         )}
 
         {activeTab === "Availability" && (
-          <div>
-            {availability.length === 0 ? (
-              <p className="text-sm text-subtle">
-                No open slots listed right now — request a time and {tutor.name} will confirm
-                directly.
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {availability.map((slot) => (
-                  <div
-                    key={slot}
-                    className="flex items-center justify-between rounded-xl border border-border p-4"
-                  >
-                    <span className="text-sm font-medium text-fg">{slot}</span>
-                    <Link
-                      href={`/tutors/${tutor.id}/book`}
-                      className="rounded-lg bg-forest px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-forest-dark"
-                    >
-                      Request
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          // Availability scheduling doesn't have a backing model yet (no
+          // Availability table in prisma/schema.prisma) — rather than fake
+          // it, this is an honest "not built yet" state. See
+          // docs/API_GUIDE.md for this as a flagged follow-up.
+          <p className="text-sm text-subtle">
+            {tutor.fullName} hasn&apos;t listed specific open slots yet — request a time and
+            they&apos;ll confirm directly.
+          </p>
         )}
       </div>
     </div>

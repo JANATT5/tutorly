@@ -5,9 +5,10 @@
 import { useMemo, useState } from "react";
 import PageHero from "@/components/layout/PageHero";
 import Button from "@/components/Button";
-import TutorCard from "@/components/tutors/TutorCard";
+import TutorCard, { curriculumLabel } from "@/components/tutors/TutorCard";
 import Dropdown from "@/components/Dropdown";
-import { tutors, subjects, curricula, languages, type SubjectKey } from "@/lib/mock-data";
+import { useTutors } from "@/hooks/useTutors";
+import { useSubjects } from "@/hooks/useSubjects";
 
 type RatingFilter = "any" | "4.5" | "4.0" | "3.5";
 type PriceFilter = "any" | "under20" | "20to30" | "over30";
@@ -34,25 +35,44 @@ const sortOptions: { value: SortOption; label: string }[] = [
   { value: "price-desc", label: "Price: high to low" },
 ];
 
+// The 3 real curriculum values, with the same labels TutorCard uses — kept
+// as one dropdown option per enum value rather than the old mock list's
+// richer (but not DB-backed) options like "IB"/"SAT".
+const curriculumOptions = [
+  { value: "all", label: "All curricula" },
+  ...Object.entries(curriculumLabel).map(([value, label]) => ({ value, label })),
+];
+
 export default function BrowsePage() {
+  const { data: tutors = [], isLoading: tutorsLoading, isError: tutorsError } = useTutors();
+  const { data: subjects = [] } = useSubjects();
+
   const [query, setQuery] = useState("");
-  const [activeSubject, setActiveSubject] = useState<SubjectKey | "all">("all");
+  const [activeSubject, setActiveSubject] = useState<string>("all"); // "all" or a Subject id
   const [curriculumFilter, setCurriculumFilter] = useState<string>("all");
   const [languageFilter, setLanguageFilter] = useState<string>("all");
   const [ratingFilter, setRatingFilter] = useState<RatingFilter>("any");
   const [priceFilter, setPriceFilter] = useState<PriceFilter>("any");
   const [sortBy, setSortBy] = useState<SortOption>("rating");
 
+  // The language dropdown's options are derived from whatever languages the
+  // currently-loaded tutors actually list (see the `languages` field on
+  // TutorProfile) instead of a hardcoded guess — it can never go stale.
+  const languageOptions = useMemo(() => {
+    const unique = Array.from(new Set(tutors.flatMap((t) => t.languages))).sort();
+    return [{ value: "all", label: "All languages" }, ...unique.map((l) => ({ value: l, label: l }))];
+  }, [tutors]);
+
   const filtered = useMemo(() => {
     const results = tutors.filter((tutor) => {
       const matchesSubject =
-        activeSubject === "all" || tutor.subjects.includes(activeSubject);
+        activeSubject === "all" || tutor.subjects.some((ts) => ts.subjectId === activeSubject);
 
       const q = query.trim().toLowerCase();
       const matchesQuery =
         q.length === 0 ||
-        tutor.name.toLowerCase().includes(q) ||
-        tutor.subjects.some((s) => s.replace("-", " ").includes(q));
+        tutor.fullName.toLowerCase().includes(q) ||
+        tutor.subjects.some((ts) => ts.subject.name.toLowerCase().includes(q));
 
       const matchesCurriculum =
         curriculumFilter === "all" || tutor.curriculum === curriculumFilter;
@@ -61,13 +81,13 @@ export default function BrowsePage() {
         languageFilter === "all" || tutor.languages.includes(languageFilter);
 
       const matchesRating =
-        ratingFilter === "any" || tutor.rating >= parseFloat(ratingFilter);
+        ratingFilter === "any" || (tutor.rating ?? 0) >= parseFloat(ratingFilter);
 
       const matchesPrice =
         priceFilter === "any" ||
-        (priceFilter === "under20" && tutor.pricePerHour < 20) ||
-        (priceFilter === "20to30" && tutor.pricePerHour >= 20 && tutor.pricePerHour <= 30) ||
-        (priceFilter === "over30" && tutor.pricePerHour > 30);
+        (priceFilter === "under20" && tutor.hourlyRate < 20) ||
+        (priceFilter === "20to30" && tutor.hourlyRate >= 20 && tutor.hourlyRate <= 30) ||
+        (priceFilter === "over30" && tutor.hourlyRate > 30);
 
       return (
         matchesSubject &&
@@ -82,20 +102,20 @@ export default function BrowsePage() {
     const sorted = [...results];
     switch (sortBy) {
       case "rating":
-        sorted.sort((a, b) => b.rating - a.rating);
+        sorted.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
         break;
       case "sessions":
         sorted.sort((a, b) => b.sessions - a.sessions);
         break;
       case "price-asc":
-        sorted.sort((a, b) => a.pricePerHour - b.pricePerHour);
+        sorted.sort((a, b) => a.hourlyRate - b.hourlyRate);
         break;
       case "price-desc":
-        sorted.sort((a, b) => b.pricePerHour - a.pricePerHour);
+        sorted.sort((a, b) => b.hourlyRate - a.hourlyRate);
         break;
     }
     return sorted;
-  }, [query, activeSubject, curriculumFilter, languageFilter, ratingFilter, priceFilter, sortBy]);
+  }, [tutors, query, activeSubject, curriculumFilter, languageFilter, ratingFilter, priceFilter, sortBy]);
 
   return (
     <>
@@ -121,17 +141,17 @@ export default function BrowsePage() {
           </Button>
           {subjects.map((s) => (
             <Button
-              key={s.key}
+              key={s.id}
               variant="outline"
-              active={activeSubject === s.key}
-              onClick={() => setActiveSubject(s.key)}
+              active={activeSubject === s.id}
+              onClick={() => setActiveSubject(s.id)}
             >
-              {s.label}
+              {s.name}
             </Button>
           ))}
         </div>
 
-        {/* Secondary filters + sort — fully wired now */}
+        {/* Secondary filters + sort */}
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap gap-2">
             <Dropdown
@@ -139,20 +159,14 @@ export default function BrowsePage() {
               showSelectedInline
               selected={curriculumFilter}
               onSelect={setCurriculumFilter}
-              options={[
-                { value: "all", label: "All curricula" },
-                ...curricula.map((c) => ({ value: c, label: c })),
-              ]}
+              options={curriculumOptions}
             />
             <Dropdown
               label="Language"
               showSelectedInline
               selected={languageFilter}
               onSelect={setLanguageFilter}
-              options={[
-                { value: "all", label: "All languages" },
-                ...languages.map((l) => ({ value: l, label: l })),
-              ]}
+              options={languageOptions}
             />
             <Dropdown
               label="Rating"
@@ -179,20 +193,30 @@ export default function BrowsePage() {
           />
         </div>
 
-        <p className="mt-6 mb-4 text-sm text-subtle">
-          {filtered.length} {filtered.length === 1 ? "tutor" : "tutors"} found
-        </p>
-
-        {filtered.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-white py-16 text-center text-sm text-subtle">
-            No tutors match that search. Try a different subject or keyword.
+        {tutorsLoading ? (
+          <p className="mt-6 mb-4 text-sm text-subtle">Loading tutors…</p>
+        ) : tutorsError ? (
+          <div className="mt-6 rounded-2xl border border-dashed border-border bg-white py-16 text-center text-sm text-subtle">
+            Couldn&apos;t load tutors right now. Please try again in a moment.
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((tutor) => (
-              <TutorCard key={tutor.id} tutor={tutor} />
-            ))}
-          </div>
+          <>
+            <p className="mt-6 mb-4 text-sm text-subtle">
+              {filtered.length} {filtered.length === 1 ? "tutor" : "tutors"} found
+            </p>
+
+            {filtered.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border bg-white py-16 text-center text-sm text-subtle">
+                No tutors match that search. Try a different subject or keyword.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {filtered.map((tutor) => (
+                  <TutorCard key={tutor.id} tutor={tutor} />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </>

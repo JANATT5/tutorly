@@ -7,7 +7,10 @@
 // generation backend yet, so step 3 surfaces the one seeded project
 // in lib/mock-data as an illustrative result rather than pretending
 // to generate something live — same honesty convention as Practice's
-// "no questions yet" state.
+// "no questions yet" state. The GENERATION stays illustrative; what's
+// real is that a logged-in student's roadmap is now actually saved via
+// POST /api/planr-paths (see useCreatePlanrPath) instead of vanishing
+// the moment they navigate away.
 
 "use client";
 
@@ -15,6 +18,8 @@ import { useState } from "react";
 import Link from "next/link";
 import PageHero from "@/components/layout/PageHero";
 import { levels, subjects, planrProjects } from "@/lib/mock-data";
+import { useCreatePlanrPath } from "@/hooks/usePlanrPaths";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 type Step = 1 | 2 | 3;
 type SkillLevel = "beginner" | "comfortable" | "confident";
@@ -46,6 +51,23 @@ export default function CreateProjectPage() {
   const isStep2Valid = subjects.every((s) => skillRatings[s.key]);
 
   const result = planrProjects[0];
+
+  const { studentProfile } = useCurrentUser();
+  const createPlanrPath = useCreatePlanrPath();
+
+  function handleGenerate() {
+    setGenerated(true);
+    // The roadmap content itself is still illustrative (see the note
+    // above) — but if a real student is logged in, save it for real so
+    // it doesn't just vanish when they navigate away.
+    if (studentProfile) {
+      createPlanrPath.mutate({
+        studentId: studentProfile.id,
+        goal,
+        steps: result.courses.map((c) => ({ title: c.title, status: c.status })),
+      });
+    }
+  }
 
   return (
     <>
@@ -181,7 +203,7 @@ export default function CreateProjectPage() {
             </p>
             <button
               type="button"
-              onClick={() => setGenerated(true)}
+              onClick={handleGenerate}
               className="mt-6 rounded-full bg-amber px-7 py-3.5 text-sm font-semibold text-fg transition-colors hover:bg-amber-hover"
             >
               Generate my roadmap →
@@ -197,6 +219,22 @@ export default function CreateProjectPage() {
             <p className="mt-1 text-xs text-subtle">
               Illustrative — real roadmap generation isn&apos;t wired up to a backend yet.
             </p>
+            {studentProfile ? (
+              <p className="mt-1 text-xs text-forest">
+                {createPlanrPath.isSuccess
+                  ? "Saved to your account."
+                  : createPlanrPath.isPending
+                    ? "Saving…"
+                    : ""}
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-subtle">
+                <Link href="/login" className="underline underline-offset-2">
+                  Log in
+                </Link>{" "}
+                to save this roadmap to your account.
+              </p>
+            )}
 
             <h2 className="mt-4 font-display text-2xl text-fg">{result.title}</h2>
             <p className="mt-1 text-sm text-subtle">
