@@ -18,6 +18,7 @@ import { useMemo, useState } from "react";
 import PageHero from "@/components/layout/PageHero";
 import { useSubjects } from "@/hooks/useSubjects";
 import { usePracticeQuestions } from "@/hooks/usePracticeQuestions";
+import { getSubjectIcon } from "@/lib/subjectIcon";
 
 const difficulties = ["Easy", "Medium", "Hard"] as const;
 type Difficulty = (typeof difficulties)[number];
@@ -224,7 +225,7 @@ export default function PracticePage() {
                 }`}
               >
                 <span className="text-2xl" aria-hidden="true">
-                  📘
+                  {getSubjectIcon(s.name)}
                 </span>
                 <p className="mt-3 font-display text-lg font-semibold text-fg">{s.name}</p>
               </button>

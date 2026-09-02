@@ -10,6 +10,7 @@
 import Link from "next/link";
 import SubjectPill from "@/components/SubjectPill";
 import FeaturedTutorCard from "@/components/tutors/FeaturedTutorCard";
+import { getSubjectIcon } from "@/lib/subjectIcon";
 import { axiosGet } from "@/lib/axios";
 import type { Tutor } from "@/hooks/useTutors";
 import type { Subject } from "@/hooks/useSubjects";
@@ -81,7 +82,7 @@ export default async function HomePage() {
               <div className="flex flex-wrap gap-3">
                 {subjects.map((subject) => (
                   <Link key={subject.id} href="/browse">
-                    <SubjectPill icon="📘" label={subject.name} />
+                    <SubjectPill icon={getSubjectIcon(subject.name)} label={subject.name} />
                   </Link>
                 ))}
               </div>
