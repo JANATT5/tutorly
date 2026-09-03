@@ -15,16 +15,24 @@
 // Two-stage approval, on purpose: passing the AI checks in steps 2–3
 // only clears the *AI* gate. Submitting in step 4 always lands on
 // "pending admin review" — never an immediate "approved" — because a
-// human still makes the final call. There's no backend yet (see the
-// TODO in handleSubmit), so "AI analysis" is a simulated delay — see
-// components/become-tutor/CertificateStep and VideoStep.
+// human still makes the final call (see AdminDashboardContent's
+// Verification tab). "AI analysis" is still a simulated delay (see
+// components/become-tutor/CertificateStep and VideoStep) — but the
+// submission itself is now real: it creates an actual User + TutorProfile
+// + TutorApplication, which is exactly what makes the applicant show up
+// in that Verification tab for a real admin to approve or reject.
 
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import PageHero from "@/components/layout/PageHero";
-import { subjects, curricula, languages } from "@/lib/mock-data";
+import { useSubjects } from "@/hooks/useSubjects";
+import { useCreateUser } from "@/hooks/useUsers";
+import { useCreateTutor, useReplaceTutorSubjects, type Tutor } from "@/hooks/useTutors";
+import { useCreateApplication } from "@/hooks/useApplications";
+import { curriculumLabel } from "@/components/tutors/TutorCard";
+import { ApiError } from "@/lib/axios";
 import CertificateStep, {
   isCertificateStepValid,
   type Certificate,
@@ -38,6 +46,21 @@ type Step = 1 | 2 | 3 | 4 | "submitted";
 
 const dayOptions = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const timeOfDayOptions = ["Mornings", "Afternoons", "Evenings"] as const;
+
+// The 3 real curriculum values (see prisma/schema.prisma's Curriculum enum
+// and curriculumLabel in TutorCard.tsx). TutorProfile.curriculum is a
+// single required value, so this is a single-select — not a pill group
+// like subjects/languages below.
+const curriculumOptions = Object.values(curriculumLabel);
+const curriculumKeyByLabel = Object.fromEntries(
+  Object.entries(curriculumLabel).map(([key, label]) => [label, key]),
+) as Record<string, Tutor["curriculum"]>;
+
+// No Language model exists in the schema — this is a plain picklist of
+// options, same category as the day/time-of-day lists above, not "mock
+// data" standing in for a database table. TutorProfile.languages IS a
+// real String[] column though, so these selections do get saved for real.
+const languages = ["Arabic", "English", "French"] as const;
 
 function togglePill(list: string[], value: string): string[] {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
@@ -53,12 +76,13 @@ const inputClasses =
 type BecomeTutorFormData = {
   fullName: string;
   email: string;
+  password: string;
   phone: string;
   hourlyRate: string;
   bio: string;
   subjects: string[];
   specificTopics: string;
-  curricula: string[];
+  curriculum: string;
   languages: string[];
   days: string[];
   timesOfDay: string[];
@@ -70,12 +94,13 @@ type BecomeTutorFormErrors = Partial<Record<keyof BecomeTutorFormData, string>>;
 const initialFormData: BecomeTutorFormData = {
   fullName: "",
   email: "",
+  password: "",
   phone: "",
   hourlyRate: "",
   bio: "",
   subjects: [],
   specificTopics: "",
-  curricula: [],
+  curriculum: "",
   languages: [],
   days: [],
   timesOfDay: [],
@@ -86,16 +111,21 @@ function validateStep1(data: BecomeTutorFormData): BecomeTutorFormErrors {
   const errors: BecomeTutorFormErrors = {};
   if (!data.fullName.trim()) errors.fullName = "Full name is required.";
   if (!data.email.trim()) errors.email = "Email is required.";
+  if (!data.password.trim() || data.password.length < 4) {
+    errors.password = "Password must be at least 4 characters.";
+  }
   if (!data.phone.trim()) errors.phone = "Phone number is required.";
   if (!data.hourlyRate.trim()) errors.hourlyRate = "Hourly rate is required.";
   if (!data.bio.trim()) errors.bio = "A short bio is required.";
   if (data.subjects.length === 0) errors.subjects = "Select at least one subject.";
+  if (!data.curriculum) errors.curriculum = "Select the curriculum you teach.";
   if (data.days.length === 0) errors.days = "Select at least one day.";
   if (data.timesOfDay.length === 0) errors.timesOfDay = "Select at least one time of day.";
   return errors;
 }
 
 export default function BecomeTutorPage() {
+  const { data: subjects = [] } = useSubjects();
   const [step, setStep] = useState<Step>(1);
 
   // Step 1 form state
@@ -103,7 +133,9 @@ export default function BecomeTutorPage() {
   const [errors, setErrors] = useState<BecomeTutorFormErrors>({});
 
   // Profile photo — separate from formData since it's a File, not a
-  // plain field value
+  // plain field value. There's no file storage backend for this app yet
+  // (same limitation CertificateStep/VideoStep already have), so this
+  // preview is local-only and isn't sent anywhere on submit.
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
 
@@ -123,7 +155,7 @@ export default function BecomeTutorPage() {
     }
   }
 
-  function handleTogglePill(field: "subjects" | "curricula" | "languages" | "days" | "timesOfDay", value: string) {
+  function handleTogglePill(field: "subjects" | "languages" | "days" | "timesOfDay", value: string) {
     handleChange(field, togglePill(formData[field], value));
   }
 
@@ -151,24 +183,82 @@ export default function BecomeTutorPage() {
   const isStep2Valid = isCertificateStepValid(certificates);
   const isStep3Valid = isVideoStepValid(videos);
 
-  function handleSubmit() {
-    // TODO: send the full application to the backend once it exists.
-    // photoFile, certificates, and videos will need real file storage.
-    // Status is always "pending_admin_review" on submit — AI passing
-    // steps 2–3 clears the AI gate, but an admin still makes the final
-    // call (see components/dashboards/AdminDashboardContent's
-    // Verification tab, rendered at /dashboard for the admin role).
-    console.log({
-      ...formData,
-      photoFile,
-      certificates: certificates.map((c) => ({ name: c.file.name, status: c.status })),
-      videos: videos.map((v) => ({
-        source: v.source.type === "file" ? v.source.file.name : v.source.url,
-        status: v.status,
-      })),
-      status: "pending_admin_review",
-    });
-    setStep("submitted");
+  const createUser = useCreateUser();
+  const createTutor = useCreateTutor();
+  const replaceTutorSubjects = useReplaceTutorSubjects();
+  const createApplication = useCreateApplication();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  async function handleSubmit() {
+    const curriculumKey = curriculumKeyByLabel[formData.curriculum];
+    if (!curriculumKey) {
+      setSubmitError("Something's wrong with the curriculum selection — go back to step 1.");
+      return;
+    }
+
+    setSubmitError(null);
+    setIsSubmitting(true);
+    try {
+      // 1. A real account — this is what actually lets an admin find this
+      // application (TutorApplication.tutorId points at a real
+      // TutorProfile, which needs a real User to belong to).
+      const user = await createUser.mutateAsync({
+        username: formData.email,
+        password: formData.password,
+        role: "TUTOR",
+      });
+      if (!user) throw new Error("Couldn't create your account. Please try again.");
+
+      // 2. Their tutor profile, unverified until an admin approves the
+      // application below.
+      const tutor = await createTutor.mutateAsync({
+        userId: user.id,
+        fullName: formData.fullName,
+        bio: formData.bio,
+        curriculum: curriculumKey,
+        hourlyRate: Number(formData.hourlyRate),
+        languages: formData.languages,
+      });
+      if (!tutor) throw new Error("Couldn't create your tutor profile. Please try again.");
+
+      // 3. The subjects they picked, resolved from name -> real Subject id.
+      const subjectIds = formData.subjects
+        .map((name) => subjects.find((s) => s.name === name)?.id)
+        .filter((id): id is string => Boolean(id));
+      if (subjectIds.length > 0) {
+        await replaceTutorSubjects.mutateAsync({ tutorId: tutor.id, subjectIds });
+      }
+
+      // A rough AI score from how many uploaded items actually passed —
+      // not a real fraud/quality model, just a real number derived from
+      // the (simulated) per-item checks instead of a hardcoded one.
+      const totalChecked = certificates.length + videos.length;
+      const verifiedCount =
+        certificates.filter((c) => c.status === "verified").length +
+        videos.filter((v) => v.status === "verified").length;
+      const aiScore = totalChecked > 0 ? Math.round((verifiedCount / totalChecked) * 100) : null;
+
+      const documents = [
+        ...certificates.map((c) => c.file.name),
+        ...videos.map((v) => (v.source.type === "file" ? v.source.file.name : v.source.url)),
+      ];
+
+      // 4. The actual application — status always starts PENDING, which
+      // is exactly what makes it show up in the admin dashboard's
+      // Verification tab (useApplications({ status: "PENDING" })).
+      await createApplication.mutateAsync({ tutorId: tutor.id, documents, aiScore });
+
+      setStep("submitted");
+    } catch (error) {
+      setSubmitError(
+        error instanceof ApiError
+          ? error.message
+          : "Something went wrong submitting your application. Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   if (step === "submitted") {
@@ -293,6 +383,16 @@ export default function BecomeTutorPage() {
                   />
                 </Field>
 
+                <Field label="Password" required error={errors.password}>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => handleChange("password", e.target.value)}
+                    placeholder="At least 4 characters"
+                    className={inputClasses}
+                  />
+                </Field>
+
                 <Field label="Phone" required error={errors.phone}>
                   <input
                     type="tel"
@@ -335,7 +435,7 @@ export default function BecomeTutorPage() {
                 Subjects <span className="text-amber">*</span>
               </p>
               <PillGroup
-                options={subjects.map((s) => s.label)}
+                options={subjects.map((s) => s.name)}
                 selected={formData.subjects}
                 onToggle={(value) => handleTogglePill("subjects", value)}
               />
@@ -353,16 +453,37 @@ export default function BecomeTutorPage() {
                     className={inputClasses}
                   />
                 </Field>
+                {/* No Topic model exists yet, so this doesn't get saved on
+                    submit — collected here for the review screen and for
+                    when that model exists. */}
               </div>
 
               <p className="mt-6 font-mono text-xs uppercase tracking-[0.14em] text-subtle">
-                Curricula
+                Curriculum <span className="text-amber">*</span>
               </p>
-              <PillGroup
-                options={[...curricula]}
-                selected={formData.curricula}
-                onToggle={(value) => handleTogglePill("curricula", value)}
-              />
+              <div className="mt-3 flex flex-wrap gap-3">
+                {curriculumOptions.map((option) => {
+                  const isActive = formData.curriculum === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => handleChange("curriculum", option)}
+                      aria-pressed={isActive}
+                      className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                        isActive
+                          ? "bg-forest text-white"
+                          : "border border-border bg-white text-fg hover:border-forest"
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+              {errors.curriculum && (
+                <p className="mt-2 text-xs text-[#B3261E]">{errors.curriculum}</p>
+              )}
 
               <p className="mt-6 font-mono text-xs uppercase tracking-[0.14em] text-subtle">
                 Languages
@@ -459,7 +580,7 @@ export default function BecomeTutorPage() {
 
               <ReviewSection title="What you teach">
                 <ReviewRow label="Subjects" value={formData.subjects.join(", ")} />
-                <ReviewRow label="Curricula" value={formData.curricula.join(", ")} />
+                <ReviewRow label="Curriculum" value={formData.curriculum} />
                 <ReviewRow label="Languages" value={formData.languages.join(", ")} />
               </ReviewSection>
 
@@ -487,12 +608,17 @@ export default function BecomeTutorPage() {
               </ReviewSection>
             </div>
 
+            {submitError && (
+              <p className="mt-4 text-sm text-[#B3261E]">{submitError}</p>
+            )}
+
             <button
               type="button"
               onClick={handleSubmit}
-              className="mt-8 w-full rounded-full bg-amber px-7 py-4 text-sm font-semibold text-fg transition-colors hover:bg-amber-hover"
+              disabled={isSubmitting}
+              className="mt-8 w-full rounded-full bg-amber px-7 py-4 text-sm font-semibold text-fg transition-colors hover:bg-amber-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Submit application
+              {isSubmitting ? "Submitting…" : "Submit application"}
             </button>
           </>
         )}

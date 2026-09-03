@@ -17,12 +17,23 @@
 import { useState } from "react";
 import Link from "next/link";
 import PageHero from "@/components/layout/PageHero";
-import { levels, subjects, planrProjects } from "@/lib/mock-data";
+import { useSubjects } from "@/hooks/useSubjects";
+import { getSubjectIcon } from "@/lib/subjectIcon";
 import { useCreatePlanrPath } from "@/hooks/usePlanrPaths";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 type Step = 1 | 2 | 3;
 type SkillLevel = "beginner" | "comfortable" | "confident";
+
+// A grade/level picklist, not a database table — same category as the
+// day/time-of-day options on the become-tutor form.
+const levels = [
+  "Grade 10",
+  "Grade 11",
+  "Grade 12 (Lebanese Bac)",
+  "AS-Level",
+  "University entry prep",
+] as const;
 
 const skillLevelOptions: { value: SkillLevel; label: string }[] = [
   { value: "beginner", label: "Just starting" },
@@ -30,11 +41,26 @@ const skillLevelOptions: { value: SkillLevel; label: string }[] = [
   { value: "confident", label: "Confident" },
 ];
 
-function togglePill(list: string[], value: string): string[] {
-  return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
-}
+// TODO(AI roadmap generation): this is still the one illustrative example
+// the old lib/mock-data.ts shipped, just relocated here so the page keeps
+// compiling now that that file is gone — NOT yet the real OpenAI-generated
+// roadmap. Swap this out once that's wired up.
+const illustrativeRoadmap = {
+  title: "Path to Computer Engineering",
+  courseCount: 5,
+  updatedLabel: "Updated recently",
+  progressPercent: 30,
+  courses: [
+    { id: "c1", title: "Algebra II fundamentals", status: "completed" as const },
+    { id: "c2", title: "Intro to Programming (Python)", status: "in-progress" as const },
+    { id: "c3", title: "Physics: Mechanics & Circuits", status: "upcoming" as const },
+    { id: "c4", title: "Discrete Mathematics", status: "upcoming" as const },
+    { id: "c5", title: "Data Structures & Algorithms", status: "upcoming" as const },
+  ],
+};
 
 export default function CreateProjectPage() {
+  const { data: subjects = [] } = useSubjects();
   const [step, setStep] = useState<Step>(1);
 
   // Step 1 — goal
@@ -48,9 +74,9 @@ export default function CreateProjectPage() {
   const [generated, setGenerated] = useState(false);
 
   const isStep1Valid = goal.trim().length > 0 && currentLevel.length > 0;
-  const isStep2Valid = subjects.every((s) => skillRatings[s.key]);
+  const isStep2Valid = subjects.length > 0 && subjects.every((s) => skillRatings[s.id]);
 
-  const result = planrProjects[0];
+  const result = illustrativeRoadmap;
 
   const { studentProfile } = useCurrentUser();
   const createPlanrPath = useCreatePlanrPath();
@@ -154,10 +180,10 @@ export default function CreateProjectPage() {
 
             <div className="mt-6 space-y-5">
               {subjects.map((subject) => (
-                <div key={subject.key}>
+                <div key={subject.id}>
                   <p className="flex items-center gap-2 text-sm font-medium text-fg">
-                    <span aria-hidden="true">{subject.icon}</span>
-                    {subject.label}
+                    <span aria-hidden="true">{getSubjectIcon(subject.name)}</span>
+                    {subject.name}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {skillLevelOptions.map((option) => (
@@ -165,11 +191,11 @@ export default function CreateProjectPage() {
                         key={option.value}
                         type="button"
                         onClick={() =>
-                          setSkillRatings((prev) => ({ ...prev, [subject.key]: option.value }))
+                          setSkillRatings((prev) => ({ ...prev, [subject.id]: option.value }))
                         }
-                        aria-pressed={skillRatings[subject.key] === option.value}
+                        aria-pressed={skillRatings[subject.id] === option.value}
                         className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                          skillRatings[subject.key] === option.value
+                          skillRatings[subject.id] === option.value
                             ? "bg-forest text-white"
                             : "border border-border bg-white text-fg hover:border-forest"
                         }`}
