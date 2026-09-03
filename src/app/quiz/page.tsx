@@ -5,227 +5,166 @@
 // (matches the "Nav Data Gotcha" doc — quiz-intro/questions/results
 // share `current` + `answers` local state, not URL params).
 //
-// TODO(AI career recommendation): the question bank + tag-based
-// path-matching below is the exact content lib/mock-data.ts used to hold,
-// just relocated inline now that that file is gone — NOT yet the real
-// OpenAI-powered recommendation. The real QuizQuestion model is just
-// { prompt, options: string[] }, with no field for tags, so there's
-// nowhere else for this to live until the AI version replaces it.
-// What IS already real: once a logged-in student finishes, their result
-// is saved via POST /api/quiz-results (see useCreateQuizResult).
+// The question bank stays local (8 fixed prompts — there's no reason to
+// move these into the database; they're not user-generated content). What
+// USED to be client-side tag-matching against a hardcoded careerPaths
+// dictionary is now a real call to POST /api/ai/career-recommendation
+// (src/lib/ai — local Ollama model, tool-grounded so subjectsToStrengthen
+// can only ever be real subject names). Once a logged-in student finishes,
+// the AI-generated result is saved via POST /api/quiz-results.
+
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useCreateQuizResult } from "@/hooks/useQuizResults";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { axiosPost, ApiError } from "@/lib/axios";
 
 type Step = "intro" | "questions" | "results";
 
-type QuizQuestion = {
-  id: string;
-  prompt: string;
-  options: { text: string; tags: string[] }[];
-};
+type QuizQuestion = { id: string; prompt: string; options: string[] };
 
 const careerQuizQuestions: QuizQuestion[] = [
   {
     id: "q1",
     prompt: "Which activity sounds most satisfying to spend a weekend on?",
     options: [
-      { text: "Building or fixing something with your hands", tags: ["engineering"] },
-      { text: "Solving a tricky logic or math puzzle", tags: ["cs", "math"] },
-      { text: "Reading about how the human body works", tags: ["medicine", "biology"] },
-      { text: "Writing, designing, or telling a story", tags: ["design", "humanities"] },
+      "Building or fixing something with your hands",
+      "Solving a tricky logic or math puzzle",
+      "Reading about how the human body works",
+      "Writing, designing, or telling a story",
     ],
   },
   {
     id: "q2",
     prompt: "In group projects, you're usually the one who...",
     options: [
-      { text: "Plans the structure and keeps things organized", tags: ["management", "engineering"] },
-      { text: "Digs into the technical details no one else wants to touch", tags: ["cs", "engineering"] },
-      { text: "Cares about how it looks and feels to use", tags: ["design"] },
-      { text: "Explains the idea clearly to everyone else", tags: ["humanities", "medicine"] },
+      "Plans the structure and keeps things organized",
+      "Digs into the technical details no one else wants to touch",
+      "Cares about how it looks and feels to use",
+      "Explains the idea clearly to everyone else",
     ],
   },
   {
     id: "q3",
     prompt: "Which school subject do you look forward to most?",
-    options: [
-      { text: "Physics", tags: ["engineering", "cs"] },
-      { text: "Biology", tags: ["medicine", "biology"] },
-      { text: "Computer Science", tags: ["cs"] },
-      { text: "Art or Literature", tags: ["design", "humanities"] },
-    ],
+    options: ["Physics", "Biology", "Computer Science", "Art or Literature"],
   },
   {
     id: "q4",
     prompt: "What kind of impact matters most to you?",
     options: [
-      { text: "Building things that improve daily life", tags: ["engineering"] },
-      { text: "Directly helping people's health", tags: ["medicine"] },
-      { text: "Creating software people use every day", tags: ["cs"] },
-      { text: "Shaping how people see or understand something", tags: ["design", "humanities"] },
+      "Building things that improve daily life",
+      "Directly helping people's health",
+      "Creating software people use every day",
+      "Shaping how people see or understand something",
     ],
   },
   {
     id: "q5",
     prompt: "Pick a problem you'd enjoy working on:",
     options: [
-      { text: "Designing a bridge that can handle an earthquake", tags: ["engineering"] },
-      { text: "Diagnosing what's wrong from a set of symptoms", tags: ["medicine", "biology"] },
-      { text: "Optimizing an app so it loads faster", tags: ["cs"] },
-      { text: "Redesigning a brand's entire visual identity", tags: ["design"] },
+      "Designing a bridge that can handle an earthquake",
+      "Diagnosing what's wrong from a set of symptoms",
+      "Optimizing an app so it loads faster",
+      "Redesigning a brand's entire visual identity",
     ],
   },
   {
     id: "q6",
     prompt: "Which work environment appeals to you more?",
-    options: [
-      { text: "A lab or hospital", tags: ["medicine", "biology"] },
-      { text: "A studio or agency", tags: ["design"] },
-      { text: "A tech company building products", tags: ["cs"] },
-      { text: "A construction or industrial site", tags: ["engineering"] },
-    ],
+    options: ["A lab or hospital", "A studio or agency", "A tech company building products", "A construction or industrial site"],
   },
   {
     id: "q7",
     prompt: "How do you prefer to learn something new?",
     options: [
-      { text: "Take it apart and see how it works", tags: ["engineering", "cs"] },
-      { text: "Read case studies and real examples", tags: ["medicine", "humanities"] },
-      { text: "Sketch or prototype it first", tags: ["design"] },
-      { text: "Practice problems until it clicks", tags: ["math", "cs"] },
+      "Take it apart and see how it works",
+      "Read case studies and real examples",
+      "Sketch or prototype it first",
+      "Practice problems until it clicks",
     ],
   },
   {
     id: "q8",
     prompt: "Ten years from now, you'd be proudest to say you...",
     options: [
-      { text: "Built infrastructure people rely on", tags: ["engineering"] },
-      { text: "Treated or saved patients", tags: ["medicine"] },
-      { text: "Shipped a product millions of people use", tags: ["cs"] },
-      { text: "Created something people find beautiful or moving", tags: ["design", "humanities"] },
+      "Built infrastructure people rely on",
+      "Treated or saved patients",
+      "Shipped a product millions of people use",
+      "Created something people find beautiful or moving",
     ],
   },
 ];
 
-// Every tag that appears above must have an entry here — a missing key
-// means careerPaths[tag] is undefined for anyone whose top answer lands
-// on that tag, which crashes the results screen.
-const careerPaths: Record<
-  string,
-  { title: string; description: string; subjectsToStrengthen: string[] }
-> = {
-  engineering: {
-    title: "Mechanical / Civil Engineering",
-    description:
-      "You think in systems and like seeing ideas become physical things. Engineering programs will lean hard on physics and math.",
-    subjectsToStrengthen: ["Physics", "Mathematics"],
-  },
-  cs: {
-    title: "Computer Science",
-    description:
-      "You enjoy logic, structure, and building things that run. A CS degree rewards strong math fundamentals and early programming practice.",
-    subjectsToStrengthen: ["Mathematics", "Computer Science"],
-  },
-  medicine: {
-    title: "Medicine / Pre-Med",
-    description:
-      "You're drawn to directly helping people's health. Pre-med tracks are heavy on biology and chemistry from day one.",
-    subjectsToStrengthen: ["Biology", "Chemistry"],
-  },
-  biology: {
-    title: "Biology / Life Sciences",
-    description:
-      "You're pulled toward how living systems work, not just clinical practice. Research and lab-based biology programs build on strong biology and chemistry.",
-    subjectsToStrengthen: ["Biology", "Chemistry"],
-  },
-  design: {
-    title: "Design / Architecture",
-    description:
-      "You care about how things look, feel, and communicate. Strong portfolios matter more than any single subject, but math still shows up in architecture.",
-    subjectsToStrengthen: ["Mathematics"],
-  },
-  humanities: {
-    title: "Humanities / Social Sciences",
-    description:
-      "You think in ideas, arguments, and how people understand each other. These programs reward strong reading, writing, and critical thinking over any one STEM subject.",
-    subjectsToStrengthen: ["Mathematics"],
-  },
-  management: {
-    title: "Business / Management",
-    description:
-      "You like organizing people and keeping complex plans on track. Business programs lean on math for the analytical side and reward clear communication.",
-    subjectsToStrengthen: ["Mathematics"],
-  },
-  math: {
-    title: "Mathematics / Data Science",
-    description:
-      "You think best in numbers and patterns, and enjoy problems that reward patient, methodical practice. Math-heavy programs build directly on strong math fundamentals.",
-    subjectsToStrengthen: ["Mathematics", "Computer Science"],
-  },
-};
+type RecommendedPath = { title: string; description: string };
 
 export default function QuizPage() {
   const [step, setStep] = useState<Step>("intro");
   const [current, setCurrent] = useState(0);
-  const [answers, setAnswers] = useState<string[][]>([]); // tags picked per question
+  const [answers, setAnswers] = useState<string[]>([]); // the chosen option TEXT per question
 
   const totalQuestions = careerQuizQuestions.length;
 
-  // Rank every tag the user's answers touched, then take the top 2–3 as
-  // suggested paths (previously this took only the single top tag, and
-  // any tag missing from careerPaths would crash the results screen —
-  // see the comment above careerPaths in lib/mock-data.ts).
-  const topPaths = useMemo(() => {
-    const tally: Record<string, number> = {};
-    answers.flat().forEach((tag) => {
-      tally[tag] = (tally[tag] ?? 0) + 1;
-    });
-    const rankedTags = Object.entries(tally)
-      .sort((a, b) => b[1] - a[1])
-      .map(([tag]) => tag)
-      .filter((tag) => tag in careerPaths);
-
-    return rankedTags.slice(0, 3).map((tag) => careerPaths[tag]);
-  }, [answers]);
-
-  const combinedSubjectsToStrengthen = useMemo(() => {
-    const seen = new Set<string>();
-    const combined: (typeof topPaths)[number]["subjectsToStrengthen"] = [];
-    topPaths.forEach((path) => {
-      path.subjectsToStrengthen.forEach((subject) => {
-        if (!seen.has(subject)) {
-          seen.add(subject);
-          combined.push(subject);
-        }
-      });
-    });
-    return combined;
-  }, [topPaths]);
+  const [topPaths, setTopPaths] = useState<RecommendedPath[]>([]);
+  // Subjects to strengthen apply to the whole result, not per-path — the AI
+  // route returns it flattened already (also a reliability fix: see the
+  // comment in api/ai/career-recommendation/route.ts).
+  const [subjectsToStrengthen, setSubjectsToStrengthen] = useState<string[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
 
   const { studentProfile } = useCurrentUser();
   const createQuizResult = useCreateQuizResult();
-  // A ref, not state — flipping it doesn't need to trigger a re-render, it
-  // just needs to survive across renders so this effect fires exactly once
-  // per finished attempt instead of on every render where step === "results".
-  const resultSavedRef = useRef(false);
+  // A ref, not state — flipping it doesn't need a re-render, it just needs
+  // to survive across renders so this effect runs exactly once per
+  // finished attempt instead of every render where step === "results".
+  const hasGeneratedRef = useRef(false);
 
   useEffect(() => {
-    if (step !== "results" || resultSavedRef.current || !studentProfile) return;
-    resultSavedRef.current = true;
-    createQuizResult.mutate({
-      studentId: studentProfile.id,
-      resultLabel: topPaths[0]?.title ?? "Explorer",
-      answers,
-    });
-  }, [step, studentProfile, topPaths, answers, createQuizResult]);
+    if (step !== "results" || hasGeneratedRef.current) return;
+    hasGeneratedRef.current = true;
 
-  function selectOption(tags: string[]) {
+    async function generate() {
+      setIsGenerating(true);
+      setGenerationError(null);
+      try {
+        const response = await axiosPost<
+          { answers: { prompt: string; answer: string }[] },
+          { paths: RecommendedPath[]; subjectsToStrengthen: string[] }
+        >("ai/career-recommendation", {
+          answers: careerQuizQuestions.map((q, i) => ({ prompt: q.prompt, answer: answers[i] })),
+        });
+        const paths = response.data?.paths ?? [];
+        setTopPaths(paths);
+        setSubjectsToStrengthen(response.data?.subjectsToStrengthen ?? []);
+
+        if (studentProfile && paths.length > 0) {
+          createQuizResult.mutate({
+            studentId: studentProfile.id,
+            resultLabel: paths[0].title,
+            answers,
+          });
+        }
+      } catch (error) {
+        setGenerationError(
+          error instanceof ApiError
+            ? error.message
+            : "Couldn't generate your results. Please try again.",
+        );
+      } finally {
+        setIsGenerating(false);
+      }
+    }
+
+    generate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- answers/studentProfile/createQuizResult are all read once per finished attempt, guarded by hasGeneratedRef above, not meant to re-run if they change mid-flight.
+  }, [step]);
+
+  function selectOption(optionText: string) {
     const next = [...answers];
-    next[current] = tags;
+    next[current] = optionText;
     setAnswers(next);
 
     if (current < totalQuestions - 1) {
@@ -239,7 +178,10 @@ export default function QuizPage() {
     setStep("intro");
     setCurrent(0);
     setAnswers([]);
-    resultSavedRef.current = false;
+    setTopPaths([]);
+    setSubjectsToStrengthen([]);
+    setGenerationError(null);
+    hasGeneratedRef.current = false;
   }
 
   // -------------------------------------------------------------
@@ -269,13 +211,12 @@ export default function QuizPage() {
         </h1>
 
         <p className="mb-2 max-w-md text-[15px] leading-relaxed text-body">
-          Answer 8 quick questions about your interests, strengths, and goals
-          — and we&apos;ll suggest personalised career paths plus the
-          subjects to strengthen before university.
+          Answer 8 quick questions about your interests, strengths, and goals — our AI will
+          suggest personalised career paths plus the subjects to strengthen before university.
         </p>
 
         <p className="mb-8 font-mono text-xs text-subtle">
-          Takes about 2 minutes · No personal data saved
+          Takes about 2 minutes to answer · results take up to a minute to generate
         </p>
 
         <button
@@ -313,13 +254,13 @@ export default function QuizPage() {
         </h2>
 
         <div className="flex flex-col gap-3">
-          {question.options.map((opt) => (
+          {question.options.map((option) => (
             <button
-              key={opt.text}
-              onClick={() => selectOption(opt.tags)}
+              key={option}
+              onClick={() => selectOption(option)}
               className="rounded-xl border border-border bg-white px-5 py-4 text-left text-[15px] text-fg transition-colors hover:border-amber hover:bg-secondary"
             >
-              {opt.text}
+              {option}
             </button>
           ))}
         </div>
@@ -339,6 +280,36 @@ export default function QuizPage() {
   // -------------------------------------------------------------
   // Results screen
   // -------------------------------------------------------------
+  if (isGenerating) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-24 text-center sm:px-6">
+        <div className="mx-auto mb-6 h-10 w-10 animate-spin rounded-full border-4 border-secondary border-t-forest" />
+        <p className="font-display text-xl text-fg">Thinking about your answers…</p>
+        <p className="mt-2 text-sm text-subtle">
+          This runs on a local AI model and can take up to a minute.
+        </p>
+      </div>
+    );
+  }
+
+  if (generationError) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-24 text-center sm:px-6">
+        <p className="font-display text-xl text-fg">Something went wrong</p>
+        <p className="mt-2 text-sm text-subtle">{generationError}</p>
+        <button
+          onClick={() => {
+            hasGeneratedRef.current = false;
+            setStep("results"); // re-trigger the effect
+          }}
+          className="mt-6 rounded-lg bg-forest px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-forest-dark"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-16 text-center sm:px-6">
       <p className="label mb-3">Your recommended paths</p>
@@ -372,7 +343,7 @@ export default function QuizPage() {
       <div className="mb-8 rounded-2xl border border-border bg-white p-6 text-left">
         <p className="label mb-3">Subjects to strengthen</p>
         <div className="flex flex-wrap gap-2">
-          {combinedSubjectsToStrengthen.map((s) => (
+          {subjectsToStrengthen.map((s) => (
             <span
               key={s}
               className="rounded-full bg-secondary px-3 py-1.5 text-sm font-medium text-forest"

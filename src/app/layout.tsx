@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import ChatWidget from "@/components/chat/ChatWidget";
 import { fontVariables } from "@/fonts";
 import { ROLE_COOKIE, parseRoleCookie } from "@/lib/session";
 import "./globals.css";
@@ -27,6 +28,7 @@ export default async function RootLayout({
           <Navbar initialRole={initialRole} />
           <main className="flex-1">{children}</main>
           <Footer />
+          <ChatWidget />
         </QueryProvider>
       </body>
     </html>

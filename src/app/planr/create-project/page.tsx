@@ -3,14 +3,11 @@
 // Fixes the "Create a new project" 404 — this route didn't exist at
 // all before, despite the button on /planr linking to it. Implements
 // the 3-step process shown on /planr's empty state ("Set your goal",
-// "Rate your skills", "Get your roadmap"). There's no real AI/roadmap
-// generation backend yet, so step 3 surfaces the one seeded project
-// in lib/mock-data as an illustrative result rather than pretending
-// to generate something live — same honesty convention as Practice's
-// "no questions yet" state. The GENERATION stays illustrative; what's
-// real is that a logged-in student's roadmap is now actually saved via
-// POST /api/planr-paths (see useCreatePlanrPath) instead of vanishing
-// the moment they navigate away.
+// "Rate your skills", "Get your roadmap"). Step 3 now calls
+// POST /api/ai/roadmap (src/lib/ai — local Ollama model) to generate a
+// real, goal-specific course roadmap instead of always showing the same
+// static example. A logged-in student's generated roadmap is saved via
+// POST /api/planr-paths (see useCreatePlanrPath).
 
 "use client";
 
@@ -21,9 +18,12 @@ import { useSubjects } from "@/hooks/useSubjects";
 import { getSubjectIcon } from "@/lib/subjectIcon";
 import { useCreatePlanrPath } from "@/hooks/usePlanrPaths";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { axiosPost, ApiError } from "@/lib/axios";
 
 type Step = 1 | 2 | 3;
 type SkillLevel = "beginner" | "comfortable" | "confident";
+type CourseStatus = "completed" | "in-progress" | "upcoming";
+type Roadmap = { title: string; courses: { title: string; status: CourseStatus }[] };
 
 // A grade/level picklist, not a database table — same category as the
 // day/time-of-day options on the become-tutor form.
@@ -41,23 +41,7 @@ const skillLevelOptions: { value: SkillLevel; label: string }[] = [
   { value: "confident", label: "Confident" },
 ];
 
-// TODO(AI roadmap generation): this is still the one illustrative example
-// the old lib/mock-data.ts shipped, just relocated here so the page keeps
-// compiling now that that file is gone — NOT yet the real OpenAI-generated
-// roadmap. Swap this out once that's wired up.
-const illustrativeRoadmap = {
-  title: "Path to Computer Engineering",
-  courseCount: 5,
-  updatedLabel: "Updated recently",
-  progressPercent: 30,
-  courses: [
-    { id: "c1", title: "Algebra II fundamentals", status: "completed" as const },
-    { id: "c2", title: "Intro to Programming (Python)", status: "in-progress" as const },
-    { id: "c3", title: "Physics: Mechanics & Circuits", status: "upcoming" as const },
-    { id: "c4", title: "Discrete Mathematics", status: "upcoming" as const },
-    { id: "c5", title: "Data Structures & Algorithms", status: "upcoming" as const },
-  ],
-};
+type GenerationState = "idle" | "generating" | "ready" | "error";
 
 export default function CreateProjectPage() {
   const { data: subjects = [] } = useSubjects();
@@ -67,40 +51,70 @@ export default function CreateProjectPage() {
   const [goal, setGoal] = useState("");
   const [currentLevel, setCurrentLevel] = useState<string>("");
 
-  // Step 2 — skill ratings
+  // Step 2 — skill ratings, keyed by subject id (need the id for the pill
+  // toggle to work per-subject) but sent to the AI keyed by subject NAME,
+  // since that's what's actually meaningful outside this component.
   const [skillRatings, setSkillRatings] = useState<Record<string, SkillLevel>>({});
 
-  // Step 3 result
-  const [generated, setGenerated] = useState(false);
+  // Step 3 — generation
+  const [generationState, setGenerationState] = useState<GenerationState>("idle");
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
 
   const isStep1Valid = goal.trim().length > 0 && currentLevel.length > 0;
   const isStep2Valid = subjects.length > 0 && subjects.every((s) => skillRatings[s.id]);
 
-  const result = illustrativeRoadmap;
-
   const { studentProfile } = useCurrentUser();
   const createPlanrPath = useCreatePlanrPath();
 
-  function handleGenerate() {
-    setGenerated(true);
-    // The roadmap content itself is still illustrative (see the note
-    // above) — but if a real student is logged in, save it for real so
-    // it doesn't just vanish when they navigate away.
-    if (studentProfile) {
-      createPlanrPath.mutate({
-        studentId: studentProfile.id,
-        goal,
-        steps: result.courses.map((c) => ({ title: c.title, status: c.status })),
-      });
+  async function handleGenerate() {
+    setGenerationState("generating");
+    setGenerationError(null);
+
+    const skillRatingsByName: Record<string, SkillLevel> = {};
+    subjects.forEach((s) => {
+      const rating = skillRatings[s.id];
+      if (rating) skillRatingsByName[s.name] = rating;
+    });
+
+    try {
+      const response = await axiosPost<
+        { goal: string; currentLevel: string; skillRatings: Record<string, SkillLevel> },
+        Roadmap
+      >("ai/roadmap", { goal, currentLevel, skillRatings: skillRatingsByName });
+
+      if (!response.data) throw new Error("The AI didn't return a roadmap.");
+      setRoadmap(response.data);
+      setGenerationState("ready");
+
+      if (studentProfile) {
+        createPlanrPath.mutate({
+          studentId: studentProfile.id,
+          goal,
+          steps: response.data.courses,
+        });
+      }
+    } catch (error) {
+      setGenerationError(
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't generate your roadmap. Please try again.",
+      );
+      setGenerationState("error");
     }
   }
+
+  const completedCount = roadmap?.courses.filter((c) => c.status === "completed").length ?? 0;
+  const progressPercent = roadmap
+    ? Math.round((completedCount / roadmap.courses.length) * 100)
+    : 0;
 
   return (
     <>
       <PageHero eyebrow={`Planr · Step ${step} of 3`} title="Build your roadmap" />
 
       <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
-        {step > 1 && !generated && (
+        {step > 1 && generationState === "idle" && (
           <button
             type="button"
             onClick={() => setStep((s) => (s - 1) as Step)}
@@ -219,13 +233,16 @@ export default function CreateProjectPage() {
           </div>
         )}
 
-        {step === 3 && !generated && (
+        {step === 3 && generationState === "idle" && (
           <div className="rounded-xl border border-border bg-white p-8 text-center">
             <p className="font-mono text-xs uppercase tracking-[0.14em] text-subtle">03</p>
             <h2 className="mt-2 font-display text-2xl text-fg">Get your roadmap</h2>
             <p className="mx-auto mt-2 max-w-sm text-sm text-body">
               We&apos;ll turn your goal and skill levels into an ordered set of courses to work
               through.
+            </p>
+            <p className="mx-auto mt-2 max-w-sm text-xs text-subtle">
+              Runs on a local AI model — can take up to a minute.
             </p>
             <button
               type="button"
@@ -237,13 +254,34 @@ export default function CreateProjectPage() {
           </div>
         )}
 
-        {step === 3 && generated && (
+        {step === 3 && generationState === "generating" && (
+          <div className="rounded-xl border border-border bg-white p-8 text-center">
+            <div className="mx-auto mb-6 h-10 w-10 animate-spin rounded-full border-4 border-secondary border-t-forest" />
+            <p className="font-display text-xl text-fg">Building your roadmap…</p>
+            <p className="mt-2 text-sm text-subtle">
+              This runs on a local AI model and can take up to a minute.
+            </p>
+          </div>
+        )}
+
+        {step === 3 && generationState === "error" && (
+          <div className="rounded-xl border border-border bg-white p-8 text-center">
+            <p className="font-display text-xl text-fg">Something went wrong</p>
+            <p className="mt-2 text-sm text-subtle">{generationError}</p>
+            <button
+              type="button"
+              onClick={handleGenerate}
+              className="mt-6 rounded-full bg-forest px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-forest-dark"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {step === 3 && generationState === "ready" && roadmap && (
           <div className="rounded-xl border border-border bg-white p-8">
             <p className="font-mono text-xs uppercase tracking-[0.14em] text-amber">
-              Example roadmap
-            </p>
-            <p className="mt-1 text-xs text-subtle">
-              Illustrative — real roadmap generation isn&apos;t wired up to a backend yet.
+              AI-generated roadmap
             </p>
             {studentProfile ? (
               <p className="mt-1 text-xs text-forest">
@@ -262,25 +300,25 @@ export default function CreateProjectPage() {
               </p>
             )}
 
-            <h2 className="mt-4 font-display text-2xl text-fg">{result.title}</h2>
+            <h2 className="mt-4 font-display text-2xl text-fg">{roadmap.title}</h2>
             <p className="mt-1 text-sm text-subtle">
-              {result.courseCount} courses · {result.updatedLabel}
+              {roadmap.courses.length} courses · Generated just now
             </p>
 
             <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-border">
               <div
                 className="h-full rounded-full bg-forest"
-                style={{ width: `${result.progressPercent}%` }}
+                style={{ width: `${progressPercent}%` }}
                 role="progressbar"
-                aria-valuenow={result.progressPercent}
+                aria-valuenow={progressPercent}
                 aria-valuemin={0}
                 aria-valuemax={100}
               />
             </div>
 
             <ol className="mt-6 space-y-3">
-              {result.courses.map((course, index) => (
-                <li key={course.id} className="flex items-center gap-3 text-sm">
+              {roadmap.courses.map((course, index) => (
+                <li key={`${course.title}-${index}`} className="flex items-center gap-3 text-sm">
                   <span
                     className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
                       course.status === "completed"
@@ -292,9 +330,7 @@ export default function CreateProjectPage() {
                   >
                     {index + 1}
                   </span>
-                  <span
-                    className={course.status === "upcoming" ? "text-subtle" : "text-fg"}
-                  >
+                  <span className={course.status === "upcoming" ? "text-subtle" : "text-fg"}>
                     {course.title}
                   </span>
                 </li>
