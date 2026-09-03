@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 // `steps` is a Prisma `Json` column — the roadmap steps Planr generates.
 // Typed loosely on purpose; see the matching note in
-// src/app/api/quiz-results/schema.ts for why.
+// quiz-results.schema.ts for why.
 const stepsSchema = z.unknown()
 
 // Body shape for POST /api/planr-paths — saving a generated learning path.

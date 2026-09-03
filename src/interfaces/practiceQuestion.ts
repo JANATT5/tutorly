@@ -3,7 +3,7 @@ import type { z } from 'zod'
 import {
   createPracticeQuestionSchema,
   practiceQuestionEditSchema,
-} from '@/app/api/practice-questions/schema'
+} from '@/app/api/schemas/practice-questions.schema'
 
 export type { PracticeQuestion }
 export type CreatePracticeQuestionDto = z.infer<typeof createPracticeQuestionSchema>

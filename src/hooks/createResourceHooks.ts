@@ -10,8 +10,8 @@ import { axiosGet, axiosPost, axiosPut, axiosPatch, axiosDelete } from '@/lib/ax
  *
  * Generic parameters:
  *   TEntity — the shape GET returns (a list item, or one record)
- *   TCreate — the shape POST expects (matches a createXSchema on the
- *             matching /api/<resource>/schema.ts)
+ *   TCreate — the shape POST expects (matches a createXSchema in
+ *             src/app/api/schemas/<resource>.schema.ts)
  *   TEdit   — the shape PUT/PATCH expect (matches the xEditSchema on that
  *             same file) — PATCH sends `Partial<TEdit>` since it's allowed
  *             to omit fields.

@@ -2,8 +2,8 @@ import type { Prisma } from '@prisma/client'
 
 /**
  * Shared between route.ts, [id]/route.ts and [id]/subjects/route.ts (same
- * "route.ts can only export handlers" reason schema.ts is split out — see
- * the comment at the top of that file).
+ * "route.ts can only export handlers" reason the zod schemas live in
+ * ../schemas/tutors.schema.ts — see the comment at the top of that file).
  */
 
 // What every /api/tutors response includes about each tutor:

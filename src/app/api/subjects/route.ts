@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ok, created, fail, handlePrismaError } from '@/lib/apiResponse'
-import { subjectSchema } from './schema'
+import { subjectSchema } from '../schemas/subjects.schema'
 
 // GET /api/subjects — list every subject (Math, Physics, ...)
 export async function GET() {

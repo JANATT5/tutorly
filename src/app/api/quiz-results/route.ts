@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { ok, created, fail, handlePrismaError } from '@/lib/apiResponse'
-import { createQuizResultSchema } from './schema'
+import { createQuizResultSchema } from '../schemas/quiz-results.schema'
 
 // GET /api/quiz-results — list quiz attempts, optionally filtered by
 // ?studentId=<id> (a student's own quiz history)

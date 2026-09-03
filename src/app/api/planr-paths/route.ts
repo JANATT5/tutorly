@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { ok, created, fail, handlePrismaError } from '@/lib/apiResponse'
-import { createPlanrPathSchema } from './schema'
+import { createPlanrPathSchema } from '../schemas/planr-paths.schema'
 
 // GET /api/planr-paths — list learning paths, optionally filtered by
 // ?studentId=<id> (a student's own Planr roadmap(s))

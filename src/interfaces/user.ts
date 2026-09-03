@@ -1,8 +1,8 @@
 import type { z } from 'zod'
-import { createUserSchema, userEditSchema } from '@/app/api/users/schema'
+import { createUserSchema, userEditSchema } from '@/app/api/schemas/users.schema'
 
 // Deliberately NOT `Prisma.UserGetPayload<...>` — every /api/users response
-// is selected through `userSafeSelect` (see src/app/api/users/schema.ts),
+// is selected through `userSafeSelect` (see src/app/api/schemas/users.schema.ts),
 // which leaves `password` out entirely. This type mirrors that select, so
 // TypeScript itself would flag any attempt to read `.password` on the
 // client.

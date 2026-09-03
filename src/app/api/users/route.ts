@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { ok, fail, created, handlePrismaError } from '@/lib/apiResponse'
-import { createUserSchema, userSafeSelect } from './schema'
+import { createUserSchema, userSafeSelect } from '../schemas/users.schema'
 
 // Validates the optional ?role= filter on GET /api/users
 const roleQuerySchema = z.enum(['ADMIN', 'TUTOR', 'STUDENT']).optional()

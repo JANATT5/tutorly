@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ok, created, fail, handlePrismaError } from '@/lib/apiResponse'
-import { createTutorSchema } from './schema'
+import { createTutorSchema } from '../schemas/tutors.schema'
 import { tutorInclude, withSessionsCount } from './helpers'
 
 // GET /api/tutors — list tutors, optionally filtered by ?subject=<name>
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json()
 
   // Validate before touching the database — see createTutorSchema in
-  // ./schema.ts for exactly what's required.
+  // ../schemas/tutors.schema.ts for exactly what's required.
   const parsed = createTutorSchema.safeParse(body)
 
   if (!parsed.success) {

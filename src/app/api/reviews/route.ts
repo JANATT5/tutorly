@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ok, created, fail, handlePrismaError } from '@/lib/apiResponse'
-import { createReviewSchema } from './schema'
+import { createReviewSchema } from '../schemas/reviews.schema'
 
 // GET /api/reviews — list reviews, optionally filtered by ?tutorId=<id>
 // (used on a tutor's profile page to show all their reviews)

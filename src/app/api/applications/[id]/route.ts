@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ok, fail, handlePrismaError } from '@/lib/apiResponse'
-import { applicationEditSchema, isDecided } from '../schema'
+import { applicationEditSchema, isDecided } from '../../schemas/applications.schema'
 
 // Next.js passes dynamic segments (the `[id]` in the folder name) as a
 // Promise you have to `await` — see
@@ -22,7 +22,7 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 }
 
 // PUT /api/applications/:id — full replace: status, documents and aiScore
-// are all required (see applicationEditSchema in ../schema.ts).
+// are all required (see applicationEditSchema in ../../schemas/applications.schema.ts).
 //
 // `reviewedAt` is stamped automatically here rather than trusted from the
 // client: the moment status moves to a decided state (APPROVED/REJECTED) we

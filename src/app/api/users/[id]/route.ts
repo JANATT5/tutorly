@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ok, fail, handlePrismaError } from '@/lib/apiResponse'
-import { userEditSchema, userSafeSelect } from '../schema'
+import { userEditSchema, userSafeSelect } from '../../schemas/users.schema'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -19,7 +19,7 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 }
 
 // PUT /api/users/:id — full replace of username/role (password optional,
-// see the note in ../schema.ts on why)
+// see the note in ../../schemas/users.schema.ts on why)
 export async function PUT(request: NextRequest, { params }: RouteContext) {
   const { id } = await params
   const body = await request.json()

@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client'
 import type { z } from 'zod'
-import { createTutorSchema, tutorEditSchema } from '@/app/api/tutors/schema'
+import { createTutorSchema, tutorEditSchema } from '@/app/api/schemas/tutors.schema'
 
 /**
  * Types for the tutors resource — kept separate from src/hooks/useTutors.ts

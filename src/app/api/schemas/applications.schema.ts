@@ -3,8 +3,10 @@ import { z } from 'zod'
 /**
  * Zod schemas for the /api/applications resource. Split out of route.ts
  * (where the original version lived) for the same reason as
- * src/app/api/tutors/schema.ts: both route.ts and [id]/route.ts need these,
- * and route.ts files should only export HTTP method handlers.
+ * tutors.schema.ts: both route.ts and [id]/route.ts need these,
+ * and route.ts files should only export HTTP method handlers. All zod
+ * schemas for the API live together in src/app/api/schemas/ so each
+ * resource's route files stay focused on handlers only.
  */
 
 // The 4 states a tutor application can be in (see prisma/schema.prisma).

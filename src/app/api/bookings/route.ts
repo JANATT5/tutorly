@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ok, created, fail, handlePrismaError } from '@/lib/apiResponse'
-import { listQuerySchema, createBookingSchema } from './schema'
+import { listQuerySchema, createBookingSchema } from '../schemas/bookings.schema'
 
 // What every /api/bookings response includes: the related student and tutor
 // records, so a dashboard can render "Booking with <tutor name>" without a

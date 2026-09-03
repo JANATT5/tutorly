@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ok, created, fail, handlePrismaError } from '@/lib/apiResponse'
-import { createPracticeQuestionSchema } from './schema'
+import { createPracticeQuestionSchema } from '../schemas/practice-questions.schema'
 
 // GET /api/practice-questions — list questions, optionally filtered by
 // ?subjectId=<id> and/or ?difficulty=<text> (used when a student picks a

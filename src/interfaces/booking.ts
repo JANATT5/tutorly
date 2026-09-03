@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client'
 import type { z } from 'zod'
-import { createBookingSchema, bookingEditSchema } from '@/app/api/bookings/schema'
+import { createBookingSchema, bookingEditSchema } from '@/app/api/schemas/bookings.schema'
 
 // Matches `bookingInclude` in src/app/api/bookings/route.ts.
 export type Booking = Prisma.BookingGetPayload<{

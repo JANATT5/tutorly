@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ok, fail, handlePrismaError } from '@/lib/apiResponse'
-import { tutorEditSchema } from '../schema'
+import { tutorEditSchema } from '../../schemas/tutors.schema'
 import { tutorInclude, withSessionsCount } from '../helpers'
 
 // Next.js passes dynamic segments (the `[id]` in the folder name) as a
@@ -23,7 +23,7 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 }
 
 // PUT /api/tutors/:id — full replace of the editable fields (see
-// tutorEditSchema in ../schema.ts). Every field is required: this is meant
+// tutorEditSchema in ../../schemas/tutors.schema.ts). Every field is required: this is meant
 // for "save the whole edited profile form", not a single-field tweak —
 // that's what PATCH below is for.
 export async function PUT(request: NextRequest, { params }: RouteContext) {

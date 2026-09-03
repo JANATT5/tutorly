@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ok, created, fail, handlePrismaError } from '@/lib/apiResponse'
-import { createStudentSchema } from './schema'
+import { createStudentSchema } from '../schemas/students.schema'
 
 // GET /api/students — list student profiles, optionally filtered by
 // ?userId=<id> (used to look up "the current student's profile" from their

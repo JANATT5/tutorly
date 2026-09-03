@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ok, created, fail, handlePrismaError } from '@/lib/apiResponse'
-import { statusQuerySchema, createApplicationSchema } from './schema'
+import { statusQuerySchema, createApplicationSchema } from '../schemas/applications.schema'
 
 // GET /api/applications — admin dashboard: list applications, optionally by
 // status, e.g. GET /api/applications?status=PENDING

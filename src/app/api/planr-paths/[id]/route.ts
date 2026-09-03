@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { ok, fail, handlePrismaError } from '@/lib/apiResponse'
-import { planrPathEditSchema } from '../schema'
+import { planrPathEditSchema } from '../../schemas/planr-paths.schema'
 
 type RouteContext = { params: Promise<{ id: string }> }
 

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ok, created, fail, handlePrismaError } from '@/lib/apiResponse'
-import { quizQuestionSchema } from './schema'
+import { quizQuestionSchema } from '../schemas/quiz-questions.schema'
 
 // GET /api/quiz-questions — the full career-quiz question bank
 export async function GET() {

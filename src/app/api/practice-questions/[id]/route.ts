@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ok, fail, handlePrismaError } from '@/lib/apiResponse'
-import { practiceQuestionEditSchema } from '../schema'
+import { practiceQuestionEditSchema } from '../../schemas/practice-questions.schema'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
