@@ -14,8 +14,9 @@ import OpenAI from 'openai'
  * reasons step-by-step by default even for trivial prompts, which measured
  * 1-6 tokens/sec here (1-4 minutes per response). llama3.2:3b doesn't do
  * that verbose chain-of-thought and is meaningfully faster for the same
- * hardware. If quality ever matters more than speed, qwen3:4b is still
- * pulled locally — just set OPENAI_MODEL=qwen3:4b.
+ * hardware. If quality ever matters more than speed, re-pull it with
+ * `ollama pull qwen3:4b` and set OPENAI_MODEL=qwen3:4b (it was removed
+ * locally to save disk space, since it wasn't the model in active use).
  *
  * To switch to real OpenAI later: set OPENAI_API_KEY in .env to a real key
  * and leave OPENAI_BASE_URL unset. No code changes needed either way — see
